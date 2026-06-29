@@ -1,0 +1,1738 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Rogue Chess - 肉鸽国际象棋</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg:           'hsl(75 30% 8%)',
+        surface:      'hsl(75 15% 14%)',
+        'surface-alt':'hsl(75 12% 20%)',
+        text:         'hsl(75 40% 88%)',
+        'text-muted': 'hsl(75 20% 50%)',
+        primary:      'hsl(75 70% 48%)',
+        accent:       'hsl(75 80% 62%)',
+        border:       'hsl(75 18% 25%)',
+        'cell-light': 'hsl(75 12% 72%)',
+        'cell-dark':  'hsl(75 12% 32%)',
+        danger:       'hsl(0 65% 48%)',
+        success:      'hsl(140 55% 45%)',
+        warning:      'hsl(45 70% 50%)',
+        info:         'hsl(210 55% 50%)',
+        portal:       'hsl(0 70% 48%)',
+        'ability-y':  'hsl(50 80% 55%)',
+        'ability-b':  'hsl(210 70% 55%)',
+        'ability-g':  'hsl(140 60% 48%)',
+        'ability-o':  'hsl(25 80% 55%)',
+        'ability-p':  'hsl(280 60% 55%)',
+      },
+      fontFamily: {
+        pixel: ['"Press Start 2P"', 'monospace', 'sans-serif'],
+      }
+    }
+  }
+};
+</script>
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+img, video { max-width: 100%; height: auto; display: block; }
+body { overflow-wrap: break-word; }
+
+body {
+  font-family: 'Press Start 2P', monospace, sans-serif;
+  background: hsl(75 30% 8%);
+  color: hsl(75 40% 88%);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+#app {
+  width: 100%;
+  max-width: 480px;
+  padding: 12px;
+}
+
+/* CRT scanline overlay */
+#app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events: none;
+  z-index: 999;
+}
+
+/* Board */
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  aspect-ratio: 1;
+  border: 3px solid hsl(75 18% 25%);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(20px, 5vw, 32px);
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.1s;
+  min-width: 0;
+  aspect-ratio: 1;
+}
+
+.cell.light { background: hsl(75 12% 72%); }
+.cell.dark  { background: hsl(75 12% 32%); }
+.cell.portal { background: hsl(0 65% 35%) !important; }
+.cell.portal.light-override { background: hsl(0 60% 40%) !important; }
+.cell.reachable { box-shadow: inset 0 0 0 3px hsl(75 80% 62%); }
+.cell.reachable::after {
+  content: '';
+  position: absolute;
+  inset: 25%;
+  border-radius: 50%;
+  background: hsl(75 80% 62%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.cell.player-pos { box-shadow: inset 0 0 0 3px hsl(75 80% 62%); }
+.cell:hover { filter: brightness(1.15); }
+
+.piece {
+  line-height: 1;
+  pointer-events: none;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  z-index: 1;
+  position: relative;
+}
+
+.capture-piece {
+  animation: captureShake 0.15s ease-in-out 3;
+  color: hsl(0, 70%, 55%);
+  text-shadow: 0 0 8px rgba(255, 0, 0, 0.6), 1px 1px 0 rgba(0,0,0,0.3);
+}
+@keyframes captureShake {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.3); }
+}
+
+.item-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 33%;
+  height: 33%;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  animation: itemGlow 2s ease-in-out infinite;
+}
+@keyframes itemGlow {
+  0%, 100% { box-shadow: 0 0 4px currentColor, 0 0 8px currentColor; opacity: 0.85; }
+  50%      { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; opacity: 1; }
+}
+
+/* Board slide animation */
+.board-wrapper {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.board-slide {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+}
+
+.board-slide { transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.28s; }
+.board-slide.slide-out-up    { transform: translateY(-110%); opacity: 0; }
+.board-slide.slide-out-down  { transform: translateY(110%); opacity: 0; }
+.board-slide.slide-out-left  { transform: translateX(-110%); opacity: 0; }
+.board-slide.slide-out-right { transform: translateX(110%); opacity: 0; }
+.board-slide.slide-in-up     { transform: translateY(110%); opacity: 0; }
+.board-slide.slide-in-down   { transform: translateY(-110%); opacity: 0; }
+.board-slide.slide-in-left   { transform: translateX(110%); opacity: 0; }
+.board-slide.slide-in-right  { transform: translateX(-110%); opacity: 0; }
+.board-slide.slide-reset     { transform: translate(0, 0); opacity: 1; }
+
+/* Capture animation */
+@keyframes captureFlash {
+  0%, 100% { background: hsl(0, 70%, 30%); }
+  50%      { background: hsl(0, 80%, 20%); }
+}
+.cell-captured {
+  animation: captureFlash 0.3s ease-in-out 3;
+}
+.capture-overlay {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(180, 30, 30, 0.3) 0%, rgba(0, 0, 0, 0.6) 100%);
+  z-index: 95;
+  pointer-events: none;
+  animation: capturePulse 0.5s ease-in-out 3;
+}
+@keyframes capturePulse {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.7; }
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s;
+}
+
+.modal-box {
+  background: hsl(75 15% 14%);
+  border: 3px solid hsl(75 18% 25%);
+  padding: 24px;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  animation: scaleIn 0.2s;
+}
+
+.modal-box h2 { font-size: 14px; margin-bottom: 16px; }
+.modal-box p  { font-size: 10px; margin-bottom: 12px; line-height: 1.8; }
+
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  font-family: 'Press Start 2P', monospace, sans-serif;
+  font-size: 10px;
+  border: 2px solid hsl(75 18% 25%);
+  background: hsl(75 12% 20%);
+  color: hsl(75 40% 88%);
+  cursor: pointer;
+  transition: all 0.1s;
+  text-transform: uppercase;
+}
+.btn:hover { background: hsl(75 20% 30%); border-color: hsl(75 80% 62%); }
+.btn.primary { background: hsl(75 70% 48%); color: hsl(75 30% 8%); border-color: hsl(75 70% 48%); }
+.btn.primary:hover { background: hsl(75 80% 55%); }
+.btn.danger { background: hsl(0 50% 35%); border-color: hsl(0 50% 35%); }
+.btn.danger:hover { background: hsl(0 55% 42%); }
+.btn.small { padding: 6px 12px; font-size: 8px; }
+
+/* Map overlay */
+.map-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s;
+}
+
+.map-container {
+  position: relative;
+  width: 90vw;
+  max-width: 500px;
+  height: 80vh;
+  max-height: 500px;
+}
+
+.map-node, .map-cell {
+  position: absolute;
+  border: 2px solid hsl(75 18% 25%);
+  background: hsl(75 12% 20%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  cursor: default;
+  border-radius: 4px;
+}
+.map-cell.map-current {
+  border-color: hsl(75 80% 62%);
+  box-shadow: 0 0 10px hsl(75 80% 62%);
+  animation: mapPulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes mapPulse {
+  from { box-shadow: 0 0 6px hsl(75 80% 62%); }
+  to   { box-shadow: 0 0 14px hsl(75 80% 62%); }
+}
+.map-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.map-dot-dim { opacity: 0.35; }
+.map-crown { font-size: 10px; margin-left: 2px; }
+.map-spawn { font-size: 12px; }
+.map-empty {
+  position: absolute;
+  border: 1px dashed hsl(75 8% 18%);
+  background: transparent;
+  border-radius: 4px;
+  opacity: 0.3;
+}
+
+/* Ability panel */
+.ability-panel {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: hsl(75 15% 14%);
+  border: 2px solid hsl(75 18% 25%);
+  padding: 16px;
+  z-index: 85;
+  max-width: 360px;
+  width: 90%;
+  animation: fadeIn 0.15s;
+  font-size: 9px;
+  line-height: 2;
+}
+
+/* HUD */
+.hud { font-size: 9px; }
+.hud .ability-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* D-pad */
+.dpad {
+  display: grid;
+  grid-template-columns: 48px 48px 48px;
+  grid-template-rows: 48px 48px 48px;
+  gap: 4px;
+  justify-content: center;
+}
+.dpad-btn {
+  background: hsl(75 12% 20%);
+  border: 2px solid hsl(75 18% 25%);
+  color: hsl(75 40% 88%);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.1s;
+}
+.dpad-btn:active { background: hsl(75 20% 35%); }
+
+/* Animations */
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes shake   { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+@keyframes eatFlash { 0% { filter: brightness(2); } 100% { filter: brightness(1); } }
+
+.pulse { animation: pulse 0.6s ease-in-out 3; }
+.shake { animation: shake 0.3s ease-in-out; }
+.eat-flash { animation: eatFlash 0.3s; }
+
+/* Toast */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: hsl(75 15% 14%);
+  border: 2px solid hsl(75 80% 62%);
+  padding: 12px 20px;
+  z-index: 110;
+  font-size: 10px;
+  animation: scaleIn 0.2s;
+  text-align: center;
+}
+
+/* Scrollbar hide */
+::-webkit-scrollbar { display: none; }
+
+@media (max-width: 400px) {
+  .cell { font-size: 18px; }
+  .hud { font-size: 7px; }
+  .btn { font-size: 8px; padding: 8px 14px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ============================================================
+// ROGUE CHESS - 肉鸽国际象棋
+// ============================================================
+
+const PIECE_SYMBOLS = {
+  white_pawn:   '♙',
+  black_pawn:   '♟',
+  black_bishop: '♝',
+  black_queen:  '♛',
+  black_rook:   '♜',
+  black_knight: '♞',
+  black_king:   '♚',
+};
+
+const ABILITY_COLORS = {
+  yellow: 'hsl(50, 80%, 55%)',
+  blue:   'hsl(210, 70%, 55%)',
+  green:  'hsl(140, 60%, 48%)',
+  orange: 'hsl(25, 80%, 55%)',
+  purple: 'hsl(280, 60%, 55%)',
+};
+
+const ABILITY_NAMES = {
+  yellow: '纵横向步数',
+  blue:   '斜向步数',
+  green:  '斜向移动',
+  orange: '跳跃过子',
+  purple: '吃过路兵',
+};
+
+const BOARD_TYPES = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'green', 'orange', 'purple', 'king'];
+const BOARD_LABELS = {
+  spawn:  '出生点',
+  yellow: '黄色能力',
+  blue:   '蓝色能力',
+  green:  '绿色能力',
+  orange: '橙色能力',
+  purple: '紫色能力',
+  king:   '国王房间',
+};
+
+// ============================================================
+// GAME STATE
+// ============================================================
+
+let gameState = {
+  phase: 'menu', // menu | playing | paused | over
+  result: null,  // 'win' | 'lose' | null
+  boards: [],
+  connections: [], // [{a: boardIndex, b: boardIndex, dirA: 'up'|'down'|'left'|'right', dirB: ...}]
+  currentBoardIndex: 0,
+  player: {
+    boardIndex: 0,
+    row: 2,
+    col: 2,
+    abilities: { yellow: 0, blue: 0, green: false, orange: false, purple: false },
+  },
+  turn: 'player', // 'player' | 'enemy'
+  turnNumber: 0,
+  reachableCells: [], // [{row, col}]
+  slideDirection: null,
+  captureAnimating: false,
+  justEnteredRoom: false,
+  bestScore: 0,
+  wins: 0,
+};
+
+// ============================================================
+// UTILITY
+// ============================================================
+
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = randInt(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
+function inBounds(r, c) { return r >= 0 && r < 5 && c >= 0 && c < 5; }
+
+// ============================================================
+// DUNGEON GENERATION
+// ============================================================
+
+function generateDungeon() {
+  // Step 1: Grow 13 rooms on a 2D orthogonal grid
+  const gridPos = []; // gridPos[i] = {x, y}
+  const occupied = new Set();
+
+  // Place spawn at origin
+  gridPos[0] = { x: 0, y: 0 };
+  occupied.add('0,0');
+
+  // Frontier: empty cells adjacent to occupied cells
+  const frontier = [];
+  const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+
+  function addFrontier(x, y) {
+    for (const [dx, dy] of dirs) {
+      const nx = x + dx, ny = y + dy;
+      const key = `${nx},${ny}`;
+      if (!occupied.has(key) && !frontier.some(f => f.x === nx && f.y === ny)) {
+        frontier.push({ x: nx, y: ny });
+      }
+    }
+  }
+  addFrontier(0, 0);
+
+  // Grow remaining 12 rooms with balanced expansion
+  for (let i = 1; i < 13; i++) {
+    // Prefer frontier cells that keep the shape balanced (closer to origin)
+    frontier.sort((a, b) => {
+      const distA = Math.abs(a.x) + Math.abs(a.y);
+      const distB = Math.abs(b.x) + Math.abs(b.y);
+      return distA - distB;
+    });
+    // Pick from the closest 60% of frontier cells for balanced growth
+    const poolSize = Math.max(1, Math.ceil(frontier.length * 0.6));
+    const idx = randInt(0, poolSize - 1);
+    const cell = frontier[idx];
+    frontier.splice(idx, 1);
+    gridPos[i] = { x: cell.x, y: cell.y };
+    occupied.add(`${cell.x},${cell.y}`);
+    addFrontier(cell.x, cell.y);
+  }
+
+  // Center the spawn: shift all coordinates so spawn is near the middle
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (let i = 0; i < 13; i++) {
+    minX = Math.min(minX, gridPos[i].x);
+    minY = Math.min(minY, gridPos[i].y);
+    maxX = Math.max(maxX, gridPos[i].x);
+    maxY = Math.max(maxY, gridPos[i].y);
+  }
+  const cx = Math.round((minX + maxX) / 2);
+  const cy = Math.round((minY + maxY) / 2);
+  for (let i = 0; i < 13; i++) {
+    gridPos[i].x -= cx;
+    gridPos[i].y -= cy;
+  }
+
+  // Step 2: Build connections from adjacent grid cells
+  const connections = [];
+  for (let i = 0; i < 13; i++) {
+    for (let j = i + 1; j < 13; j++) {
+      const dx = gridPos[j].x - gridPos[i].x;
+      const dy = gridPos[j].y - gridPos[i].y;
+      if (Math.abs(dx) + Math.abs(dy) !== 1) continue;
+      // Orthogonally adjacent: determine edges
+      let edgeA, edgeB;
+      if (dy === -1) { edgeA = 0; edgeB = 2; }      // j above i: i.up <-> j.down
+      else if (dy === 1) { edgeA = 2; edgeB = 0; }  // j below i: i.down <-> j.up
+      else if (dx === -1) { edgeA = 3; edgeB = 1; } // j left of i: i.left <-> j.right
+      else { edgeA = 1; edgeB = 3; }                // j right of i: i.right <-> j.left
+      const col = randInt(1, 3);
+      connections.push({ a: i, edgeA, b: j, edgeB, col });
+    }
+  }
+
+  // Step 3: Assign types, ensure king is at least 2 steps from spawn
+  const types = shuffle([...BOARD_TYPES]);
+  const spawnIdx = types.indexOf('spawn');
+  if (spawnIdx !== 0) { [types[0], types[spawnIdx]] = [types[spawnIdx], types[0]]; }
+
+  // Move king away from spawn if too close
+  const kingIdx = types.indexOf('king');
+  const kingDist = Math.abs(gridPos[kingIdx].x - gridPos[0].x) + Math.abs(gridPos[kingIdx].y - gridPos[0].y);
+  if (kingDist < 2) {
+    // Find a room far enough from spawn to swap with
+    const candidates = [];
+    for (let i = 1; i < 13; i++) {
+      if (i === kingIdx) continue;
+      const d = Math.abs(gridPos[i].x - gridPos[0].x) + Math.abs(gridPos[i].y - gridPos[0].y);
+      if (d >= 2) candidates.push(i);
+    }
+    if (candidates.length > 0) {
+      const swap = pick(candidates);
+      [types[kingIdx], types[swap]] = [types[swap], types[kingIdx]];
+    }
+  }
+
+  // Step 4: Generate boards
+  const boards = [];
+  for (let i = 0; i < 13; i++) {
+    boards.push(generateBoard(i, types[i], connections));
+  }
+
+  return { boards, connections, types, gridPos };
+}
+
+function getPortalPos(edge, col) {
+  // edge: 0=up, 1=right, 2=down, 3=left
+  // col: column index for up/down, row index for left/right
+  switch (edge) {
+    case 0: return { row: 0, col };
+    case 2: return { row: 4, col };
+    case 3: return { row: col, col: 0 };
+    case 1: return { row: col, col: 4 };
+    default: return { row: 2, col: 2 };
+  }
+}
+
+function edgeToDir(edge) {
+  const map = { 0: 'up', 1: 'right', 2: 'down', 3: 'left' };
+  return map[edge] || 'up';
+}
+
+function isPortalSafe(portalCells, enemies) {
+  for (const p of portalCells) {
+    // Portal cell itself must be empty
+    if (enemies.some(e => e.row === p.row && e.col === p.col)) return false;
+    // 8 surrounding cells must be empty
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        if (dr === 0 && dc === 0) continue;
+        const nr = p.row + dr, nc = p.col + dc;
+        if (nr < 0 || nr > 4 || nc < 0 || nc > 4) continue;
+        if (enemies.some(e => e.row === nr && e.col === nc)) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function generateBoard(index, type, allConnections) {
+  const myConns = allConnections.filter(c => c.a === index || c.b === index);
+
+  const portalCells = [];
+  const occupiedForPortal = new Set();
+
+  for (const conn of myConns) {
+    const isA = conn.a === index;
+    const edge = isA ? conn.edgeA : conn.edgeB;
+    const targetBoard = isA ? conn.b : conn.a;
+    const pos = getPortalPos(edge, conn.col);
+    const dir = edgeToDir(edge);
+
+    const key = `${pos.row},${pos.col}`;
+    if (!occupiedForPortal.has(key)) {
+      occupiedForPortal.add(key);
+      portalCells.push({ row: pos.row, col: pos.col, targetBoard, direction: dir });
+    }
+  }
+
+  // Generate enemies with portal safety
+  let enemies;
+  let attempts = 0;
+  do {
+    enemies = [];
+    const occupied = new Set(portalCells.map(p => `${p.row},${p.col}`));
+    if (type === 'spawn') occupied.add('2,2');
+
+    for (let i = 0; i < 2; i++) {
+      const pos = randomEmptyCell(occupied);
+      occupied.add(`${pos.row},${pos.col}`);
+      enemies.push({ type: 'pawn', color: 'black', row: pos.row, col: pos.col, lastMoveTurn: -999 });
+    }
+
+    const advancedTypes = ['bishop', 'queen', 'rook', 'knight'];
+    const chosen = pick(advancedTypes);
+    const apos = randomEmptyCell(occupied);
+    occupied.add(`${apos.row},${apos.col}`);
+    enemies.push({ type: chosen, color: 'black', row: apos.row, col: apos.col, lastMoveTurn: -999 });
+
+    if (type === 'king') {
+      const kpos = randomEmptyCell(occupied);
+      occupied.add(`${kpos.row},${kpos.col}`);
+      enemies.push({ type: 'king', color: 'black', row: kpos.row, col: kpos.col, lastMoveTurn: -999 });
+      const qpos = randomEmptyCell(occupied);
+      occupied.add(`${qpos.row},${qpos.col}`);
+      enemies.push({ type: 'queen', color: 'black', row: qpos.row, col: qpos.col, lastMoveTurn: -999 });
+    }
+    attempts++;
+  } while (!isPortalSafe(portalCells, enemies) && attempts < 100);
+
+  let item = null;
+  if (type !== 'spawn' && type !== 'king') {
+    const occupied = new Set(portalCells.map(p => `${p.row},${p.col}`));
+    enemies.forEach(e => occupied.add(`${e.row},${e.col}`));
+    const itemPos = randomEmptyCell(occupied);
+    if (itemPos) {
+      item = { type, row: itemPos.row, col: itemPos.col, collected: false };
+    }
+  }
+
+  return { index, type, portalCells, enemies, item };
+}
+
+function randomEmptyCell(occupied) {
+  const candidates = [];
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      if (!occupied.has(`${r},${c}`)) candidates.push({ row: r, col: c });
+    }
+  }
+  if (candidates.length === 0) {
+    // Fallback: return center
+    return { row: 2, col: 2 };
+  }
+  return pick(candidates);
+}
+
+// ============================================================
+// MOVE GENERATION
+// ============================================================
+
+function getPlayerMoves(state) {
+  const board = state.boards[state.currentBoardIndex];
+  const { row, col, abilities } = state.player;
+  const maxOrtho = 1 + abilities.yellow;
+  const maxDiag = abilities.green ? (1 + abilities.blue) : 0;
+  const canJump = abilities.orange;
+
+  const reachable = [];
+  const visited = new Set();
+  const queue = [{ row, col, jumped: false, orthoSteps: 0, diagSteps: 0 }];
+  visited.add(`${row},${col}`);
+
+  // BFS for orthogonal + diagonal moves
+  const orthoDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const diagDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+  // We need to handle multi-step moves carefully
+  // For orthogonal: up to maxOrtho steps in each direction
+  for (const [dr, dc] of orthoDirs) {
+    let jumped = false;
+    for (let step = 1; step <= maxOrtho; step++) {
+      const nr = row + dr * step;
+      const nc = col + dc * step;
+      if (!inBounds(nr, nc)) break;
+      const cellOccupant = getEnemyAt(board, nr, nc);
+      if (cellOccupant) {
+        if (!jumped && canJump && step < maxOrtho) {
+          // Jump over this piece
+          jumped = true;
+          continue;
+        }
+        // Can capture
+        reachable.push({ row: nr, col: nc });
+        break;
+      }
+      reachable.push({ row: nr, col: nc });
+    }
+  }
+
+  // Diagonal moves
+  for (const [dr, dc] of diagDirs) {
+    let jumped = false;
+    for (let step = 1; step <= maxDiag; step++) {
+      const nr = row + dr * step;
+      const nc = col + dc * step;
+      if (!inBounds(nr, nc)) break;
+      const cellOccupant = getEnemyAt(board, nr, nc);
+      if (cellOccupant) {
+        if (!jumped && canJump && step < maxDiag) {
+          jumped = true;
+          continue;
+        }
+        reachable.push({ row: nr, col: nc });
+        break;
+      }
+      reachable.push({ row: nr, col: nc });
+    }
+  }
+
+  // Deduplicate
+  const unique = [];
+  const seen = new Set();
+  for (const r of reachable) {
+    const k = `${r.row},${r.col}`;
+    if (!seen.has(k)) { seen.add(k); unique.push(r); }
+  }
+  return unique;
+}
+
+function getEnemyAt(board, row, col) {
+  return board.enemies.find(e => e.row === row && e.col === col) || null;
+}
+
+function getPieceAt(board, row, col, playerRow, playerCol) {
+  if (row === playerRow && col === playerCol) return { type: 'pawn', color: 'white' };
+  return getEnemyAt(board, row, col);
+}
+
+function getEnemyMoves(board, enemy, playerRow, playerCol) {
+  const moves = [];
+  const { type, row, col } = enemy;
+
+  const allEnemies = board.enemies;
+  function isBlocked(r, c) {
+    if (r === playerRow && c === playerCol) return false; // can capture player
+    return allEnemies.some(e => e !== enemy && e.row === r && e.col === c);
+  }
+
+  function addLineMoves(dirs, maxSteps = 5) {
+    for (const [dr, dc] of dirs) {
+      for (let step = 1; step <= maxSteps; step++) {
+        const nr = row + dr * step;
+        const nc = col + dc * step;
+        if (!inBounds(nr, nc)) break;
+        if (isBlocked(nr, nc)) break;
+        moves.push({ row: nr, col: nc });
+        if (nr === playerRow && nc === playerCol) break; // stop after capturing player
+      }
+    }
+  }
+
+  switch (type) {
+    case 'pawn': {
+      // Black pawn: can move up/down/left/right 1 step, capture diagonally
+      const moveDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      const capDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+      for (const [dr, dc] of moveDirs) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc) && !isBlocked(nr, nc) && !(nr === playerRow && nc === playerCol)) {
+          moves.push({ row: nr, col: nc });
+        }
+      }
+      for (const [dr, dc] of capDirs) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc) && (nr === playerRow && nc === playerCol)) {
+          moves.push({ row: nr, col: nc });
+        }
+      }
+      break;
+    }
+    case 'bishop':
+      addLineMoves([[-1, -1], [-1, 1], [1, -1], [1, 1]]);
+      break;
+    case 'rook':
+      addLineMoves([[-1, 0], [1, 0], [0, -1], [0, 1]]);
+      break;
+    case 'queen':
+      addLineMoves([[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]]);
+      break;
+    case 'knight': {
+      const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+      for (const [dr, dc] of knightMoves) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc) && !isBlocked(nr, nc)) {
+          moves.push({ row: nr, col: nc });
+        }
+      }
+      break;
+    }
+    case 'king': {
+      const kingDirs = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+      for (const [dr, dc] of kingDirs) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc) && !isBlocked(nr, nc)) {
+          moves.push({ row: nr, col: nc });
+        }
+      }
+      break;
+    }
+  }
+
+  return moves;
+}
+
+// ============================================================
+// AI
+// ============================================================
+
+function aiMove(state) {
+  const board = state.boards[state.currentBoardIndex];
+  const { row: pr, col: pc } = state.player;
+  const allMoves = [];
+
+  for (const enemy of board.enemies) {
+    const moves = getEnemyMoves(board, enemy, pr, pc);
+    for (const move of moves) {
+      let score = 0;
+      if (move.row === pr && move.col === pc) {
+        // First turn safety: cannot capture player if just entered room
+        if (state.justEnteredRoom) continue;
+        score = 1000;
+      } else {
+        const oldDist = Math.abs(enemy.row - pr) + Math.abs(enemy.col - pc);
+        const newDist = Math.abs(move.row - pr) + Math.abs(move.col - pc);
+        score = (oldDist - newDist) * 10 + randInt(0, 5);
+      }
+      allMoves.push({ enemy, move, score });
+    }
+  }
+
+  if (allMoves.length === 0) return null;
+
+  // Sort by score descending, pick from top tier
+  allMoves.sort((a, b) => b.score - a.score);
+  const topScore = allMoves[0].score;
+  const topMoves = allMoves.filter(m => m.score >= topScore - 5);
+  return pick(topMoves);
+}
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+
+function initGame() {
+  const dungeon = generateDungeon();
+  gameState = {
+    phase: 'playing',
+    result: null,
+    boards: dungeon.boards,
+    connections: dungeon.connections,
+    gridPos: dungeon.gridPos,
+    currentBoardIndex: 0,
+    player: {
+      boardIndex: 0,
+      row: 2,
+      col: 2,
+      abilities: { yellow: 0, blue: 0, green: false, orange: false, purple: false },
+    },
+    turn: 'player',
+    turnNumber: 1,
+    reachableCells: [],
+    slideDirection: null,
+    captureAnimating: false,
+    justEnteredRoom: false,
+    bestScore: gameState.bestScore,
+    wins: gameState.wins,
+  };
+  gameState.reachableCells = getPlayerMoves(gameState);
+  loadBestScore();
+  render();
+}
+
+function movePlayer(toRow, toCol) {
+  if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
+
+  const isReachable = gameState.reachableCells.some(c => c.row === toRow && c.col === toCol);
+  if (!isReachable) return;
+
+  const board = gameState.boards[gameState.currentBoardIndex];
+  const { row: fromRow, col: fromCol } = gameState.player;
+
+  // Check for portal
+  const portal = board.portalCells.find(p => p.row === toRow && p.col === toCol);
+
+  // Check for enemy capture
+  const enemyIdx = board.enemies.findIndex(e => e.row === toRow && e.col === toCol);
+  let capturedKing = false;
+  if (enemyIdx !== -1) {
+    const enemy = board.enemies[enemyIdx];
+    if (enemy.type === 'king') capturedKing = true;
+    board.enemies.splice(enemyIdx, 1);
+  }
+
+  // Check for item pickup
+  let itemPicked = null;
+  if (board.item && !board.item.collected && board.item.row === toRow && board.item.col === toCol) {
+    board.item.collected = true;
+    itemPicked = board.item.type;
+    applyAbility(itemPicked);
+  }
+
+  // Move player
+  gameState.player.row = toRow;
+  gameState.player.col = toCol;
+  gameState.justEnteredRoom = false;
+
+  // Check purple ability (eat passing pawn)
+  if (gameState.player.abilities.purple) {
+    triggerPurpleAbility(board);
+  }
+
+  // Portal transition
+  if (portal) {
+    gameState.slideDirection = portal.direction;
+    setTimeout(() => {
+      switchBoard(portal.targetBoard);
+      if (capturedKing) {
+        winGame();
+        return;
+      }
+      endPlayerTurn();
+    }, 300);
+    render();
+    return;
+  }
+
+  if (capturedKing) {
+    winGame();
+    return;
+  }
+
+  gameState.justEnteredRoom = false;
+  endPlayerTurn();
+}
+
+function endPlayerTurn() {
+  gameState.turn = 'enemy';
+  render();
+
+  // AI turn after a short delay
+  setTimeout(() => {
+    if (gameState.phase !== 'playing') return;
+    const result = aiMove(gameState);
+    if (result) {
+      const { enemy, move } = result;
+      const board = gameState.boards[gameState.currentBoardIndex];
+
+      // Check if AI captures player
+      if (move.row === gameState.player.row && move.col === gameState.player.col) {
+        enemy.row = move.row;
+        enemy.col = move.col;
+        enemy.lastMoveTurn = gameState.turnNumber;
+        gameState.captureAnimating = true;
+        render();
+        setTimeout(() => {
+          loseGame();
+        }, 1400);
+        return;
+      }
+
+      // Check if AI steps on item (enemies can't pick up items, but they can step on them)
+      // Actually enemies don't interact with items - they just move
+
+      enemy.row = move.row;
+      enemy.col = move.col;
+      enemy.lastMoveTurn = gameState.turnNumber;
+    }
+
+    gameState.turn = 'player';
+    gameState.turnNumber++;
+    gameState.reachableCells = getPlayerMoves(gameState);
+    render();
+  }, 400);
+}
+
+function switchBoardWithOld(oldBoardIndex, targetIndex) {
+  const newBoard = gameState.boards[targetIndex];
+  const entryPortal = newBoard.portalCells.find(p => p.targetBoard === oldBoardIndex);
+
+  gameState.currentBoardIndex = targetIndex;
+  gameState.player.boardIndex = targetIndex;
+
+  if (entryPortal) {
+    gameState.player.row = entryPortal.row;
+    gameState.player.col = entryPortal.col;
+  } else {
+    const anyPortal = newBoard.portalCells[0];
+    if (anyPortal) {
+      gameState.player.row = anyPortal.row;
+      gameState.player.col = anyPortal.col;
+    } else {
+      gameState.player.row = 2;
+      gameState.player.col = 2;
+    }
+  }
+
+  // Set slide-in direction
+  const oppMap = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  gameState.slideDirection = 'in-' + (oppMap[gameState._lastSlideDir] || 'up');
+  gameState.justEnteredRoom = true;
+  render();
+
+  // Trigger CSS transition: force reflow then change class
+  requestAnimationFrame(() => {
+    const boardEl = document.getElementById('board-grid');
+    if (boardEl) {
+      boardEl.offsetHeight;
+      boardEl.classList.remove('slide-in-up', 'slide-in-down', 'slide-in-left', 'slide-in-right');
+      boardEl.classList.add('slide-reset');
+    }
+    setTimeout(() => {
+      gameState.slideDirection = null;
+    }, 320);
+  });
+}
+
+// Fix: update movePlayer to use old board index
+// Actually, let me refactor the portal transition logic
+
+function applyAbility(type) {
+  switch (type) {
+    case 'yellow': gameState.player.abilities.yellow = Math.min(4, gameState.player.abilities.yellow + 1); break;
+    case 'blue':   gameState.player.abilities.blue = Math.min(4, gameState.player.abilities.blue + 1); break;
+    case 'green':  gameState.player.abilities.green = true; break;
+    case 'orange': gameState.player.abilities.orange = true; break;
+    case 'purple': gameState.player.abilities.purple = true; break;
+  }
+}
+
+function triggerPurpleAbility(board) {
+  const { row, col } = gameState.player;
+  const candidates = [];
+  const checkPositions = [[row, col - 1], [row, col + 1]];
+  for (const [r, c] of checkPositions) {
+    if (!inBounds(r, c)) continue;
+    const enemy = getEnemyAt(board, r, c);
+    if (enemy && enemy.lastMoveTurn >= gameState.turnNumber - 1) {
+      candidates.push(enemy);
+    }
+  }
+  if (candidates.length > 0) {
+    const target = pick(candidates);
+    const idx = board.enemies.indexOf(target);
+    if (idx !== -1) board.enemies.splice(idx, 1);
+  }
+}
+
+function winGame() {
+  gameState.phase = 'over';
+  gameState.result = 'win';
+  gameState.wins++;
+  saveBestScore();
+  render();
+}
+
+function loseGame() {
+  gameState.phase = 'over';
+  gameState.result = 'lose';
+  saveBestScore();
+  render();
+}
+
+function restartGame() {
+  initGame();
+}
+
+function loadBestScore() {
+  try {
+    gameState.bestScore = parseInt(localStorage.getItem('roguechess_best') || '0');
+    gameState.wins = parseInt(localStorage.getItem('roguechess_wins') || '0');
+  } catch (e) { /* ignore */ }
+}
+
+function saveBestScore() {
+  try {
+    localStorage.setItem('roguechess_best', gameState.wins);
+    localStorage.setItem('roguechess_wins', gameState.wins);
+    gameState.bestScore = gameState.wins;
+  } catch (e) { /* ignore */ }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+
+function render() {
+  const app = document.getElementById('app');
+  if (gameState.phase === 'menu') {
+    app.innerHTML = renderMenu();
+  } else if (gameState.phase === 'over') {
+    app.innerHTML = renderGameOver();
+  } else {
+    app.innerHTML = renderGame();
+  }
+  bindEvents();
+}
+
+function renderMenu() {
+  loadBestScore();
+  return `
+    <div class="text-center" style="padding-top: 20vh;">
+      <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 8px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
+      <h1 style="font-size: 16px; margin-bottom: 4px; line-height: 1.8;">ROGUE</h1>
+      <h1 style="font-size: 16px; margin-bottom: 24px; line-height: 1.8; color: hsl(75 80% 62%);">CHESS</h1>
+      <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 32px; line-height: 2;">
+        肉鸽国际象棋<br>
+        探索13个棋盘房间<br>
+        收集能力，击败国王
+      </p>
+      <button class="btn primary" onclick="initGame()" style="margin-bottom: 12px;">开始游戏</button>
+      <p style="font-size: 8px; color: hsl(75 20% 50%); margin-top: 24px; line-height: 2;">
+        最高胜场: ${gameState.bestScore}
+      </p>
+      <div style="margin-top: 32px; font-size: 7px; color: hsl(75 15% 35%); line-height: 2;">
+        Tab 地图 | Ctrl 能力 | Esc 菜单<br>
+        方向键/点击 移动
+      </div>
+    </div>
+  `;
+}
+
+function renderGameOver() {
+  const isWin = gameState.result === 'win';
+  return `
+    <div class="modal-overlay" style="position: relative; background: transparent;">
+      <div class="modal-box">
+        <h2 style="color: ${isWin ? 'hsl(140 55% 45%)' : 'hsl(0 65% 48%)'}">
+          ${isWin ? '★ 胜利 ★' : '✗ 失败 ✗'}
+        </h2>
+        <p style="font-size: 10px; line-height: 2;">
+          ${isWin ? '你击败了黑色国王！' : '你被敌方棋子吃掉了...'}<br>
+          胜场: ${gameState.wins}
+        </p>
+        <button class="btn primary" onclick="restartGame()" style="margin-right: 8px;">再来一局</button>
+        <button class="btn" onclick="showMenu()">返回菜单</button>
+      </div>
+    </div>
+  `;
+}
+
+function showMenu() {
+  gameState.phase = 'menu';
+  render();
+}
+
+function renderGame() {
+  const board = gameState.boards[gameState.currentBoardIndex];
+  const { row: pr, col: pc } = gameState.player;
+  let slideClass = 'slide-reset';
+  if (gameState.slideDirection) {
+    if (gameState.slideDirection.startsWith('out-')) {
+      slideClass = 'slide-out-' + gameState.slideDirection.replace('out-', '');
+    } else if (gameState.slideDirection.startsWith('in-')) {
+      slideClass = 'slide-in-' + gameState.slideDirection.replace('in-', '');
+    }
+  }
+
+  // Build board cells
+  let cellsHTML = '';
+  for (let r = 0; r < 5; r++) {
+    for (let c = 0; c < 5; c++) {
+      const isLight = (r + c) % 2 === 0;
+      const isPortal = board.portalCells.some(p => p.row === r && p.col === c);
+      const isReachable = gameState.reachableCells.some(rc => rc.row === r && rc.col === c);
+      const isPlayer = (r === pr && c === pc);
+      const enemy = getEnemyAt(board, r, c);
+      const hasItem = board.item && !board.item.collected && board.item.row === r && board.item.col === c;
+
+      let cellClass = isLight ? 'light' : 'dark';
+      if (isPortal) cellClass += ' portal' + (isLight ? ' light-override' : '');
+      if (isReachable && !isPlayer) cellClass += ' reachable';
+      if (isPlayer) cellClass += ' player-pos';
+      if (isPlayer && gameState.captureAnimating) cellClass += ' cell-captured';
+
+      let content = '';
+      if (isPlayer) {
+        if (gameState.captureAnimating) {
+          // Show enemy piece on player cell during capture animation
+          const capEnemy = board.enemies.find(e => e.row === pr && e.col === pc);
+          if (capEnemy) {
+            const sym = PIECE_SYMBOLS[`black_${capEnemy.type}`] || '?';
+            content = `<span class="piece capture-piece">${sym}</span>`;
+          } else {
+            content = `<span class="piece">${PIECE_SYMBOLS.white_pawn}</span>`;
+          }
+        } else {
+          content = `<span class="piece">${PIECE_SYMBOLS.white_pawn}</span>`;
+        }
+      } else if (enemy) {
+        const sym = PIECE_SYMBOLS[`black_${enemy.type}`] || '?';
+        content = `<span class="piece">${sym}</span>`;
+      }
+
+      let itemDot = '';
+      if (hasItem) {
+        const colorMap = {
+          yellow: 'hsl(50, 80%, 55%)', blue: 'hsl(210, 70%, 55%)', green: 'hsl(140, 60%, 48%)',
+          orange: 'hsl(25, 80%, 55%)', purple: 'hsl(280, 60%, 55%)'
+        };
+        const clr = colorMap[board.item.type] || 'hsl(50, 80%, 55%)';
+        itemDot = `<span class="item-indicator" style="background:${clr}; color:${clr};"></span>`;
+      }
+
+      cellsHTML += `
+        <div class="cell ${cellClass}" data-row="${r}" data-col="${c}">
+          ${content}${itemDot}
+        </div>`;
+    }
+  }
+
+  const boardType = board.type;
+  const boardLabel = BOARD_LABELS[boardType] || boardType;
+
+  // Ability dots for HUD
+  const abDots = [];
+  if (gameState.player.abilities.yellow > 0) abDots.push(`<span class="ability-dot" style="background:hsl(50,80%,55%);box-shadow:0 0 4px hsl(50,80%,55%);" title="黄色×${gameState.player.abilities.yellow}"></span>`);
+  if (gameState.player.abilities.blue > 0) abDots.push(`<span class="ability-dot" style="background:hsl(210,70%,55%);box-shadow:0 0 4px hsl(210,70%,55%);" title="蓝色×${gameState.player.abilities.blue}"></span>`);
+  if (gameState.player.abilities.green) abDots.push(`<span class="ability-dot" style="background:hsl(140,60%,48%);box-shadow:0 0 4px hsl(140,60%,48%);" title="绿色"></span>`);
+  if (gameState.player.abilities.orange) abDots.push(`<span class="ability-dot" style="background:hsl(25,80%,55%);box-shadow:0 0 4px hsl(25,80%,55%);" title="橙色"></span>`);
+  if (gameState.player.abilities.purple) abDots.push(`<span class="ability-dot" style="background:hsl(280,60%,55%);box-shadow:0 0 4px hsl(280,60%,55%);" title="紫色"></span>`);
+
+  const turnLabel = gameState.turn === 'player' ? '你的回合' : '敌方回合';
+  const turnColor = gameState.turn === 'player' ? 'hsl(75,80%,62%)' : 'hsl(0,65%,48%)';
+
+  return `
+    <div>
+      <!-- HUD -->
+      <div class="hud flex items-center justify-between mb-2 px-1" style="gap: 8px;">
+        <div class="min-w-0 flex-1">
+          <div style="color: hsl(75 80% 62%);">${boardLabel}</div>
+          <div style="font-size: 7px; color: hsl(75 20% 50%);">房间 ${gameState.currentBoardIndex + 1}/13</div>
+        </div>
+        <div class="text-center min-w-0">
+          <div style="color: ${turnColor};">${turnLabel}</div>
+          <div style="font-size: 7px; color: hsl(75 20% 50%);">回合 ${gameState.turnNumber}</div>
+        </div>
+        <div class="flex items-center gap-1 min-w-0" style="gap: 4px;">
+          ${abDots.length > 0 ? abDots.join('') : '<span style="font-size:7px;color:hsl(75,20%,50%);">无能力</span>'}
+        </div>
+      </div>
+
+      <!-- Board -->
+      <div class="board-wrapper">
+        <div class="board-grid board-slide ${slideClass}" id="board-grid">
+          ${cellsHTML}
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="mt-3 flex items-center justify-between" style="gap: 8px;">
+        <button class="btn small" id="btn-map">地图</button>
+        <button class="btn small" id="btn-abilities">能力</button>
+        <button class="btn small" id="btn-menu">菜单</button>
+      </div>
+
+      <!-- D-Pad for mobile -->
+      <div class="mt-3 dpad" id="dpad">
+        <div></div>
+        <button class="dpad-btn" data-dir="up">▲</button>
+        <div></div>
+        <button class="dpad-btn" data-dir="left">◀</button>
+        <div class="dpad-btn" style="font-size:10px; background:hsl(75,12%,16%); cursor:default;">♙</div>
+        <button class="dpad-btn" data-dir="right">▶</button>
+        <div></div>
+        <button class="dpad-btn" data-dir="down">▼</button>
+        <div></div>
+      </div>
+
+      <div style="font-size: 7px; color: hsl(75 15% 30%); text-align: center; margin-top: 8px; line-height: 2;">
+        点击格子移动 | 方向键移动 | Tab地图 Ctrl能力 Esc菜单
+      </div>
+      ${gameState.captureAnimating ? '<div class="capture-overlay"></div>' : ''}
+    </div>
+  `;
+}
+
+// ============================================================
+// OVERLAYS
+// ============================================================
+
+let mapVisible = false;
+let abilitiesVisible = false;
+let pauseVisible = false;
+
+function toggleMap() {
+  if (gameState.phase !== 'playing') return;
+  mapVisible = !mapVisible;
+  abilitiesVisible = false;
+  pauseVisible = false;
+  renderOverlays();
+}
+
+function toggleAbilities() {
+  if (gameState.phase !== 'playing') return;
+  abilitiesVisible = !abilitiesVisible;
+  mapVisible = false;
+  pauseVisible = false;
+  renderOverlays();
+}
+
+function togglePause() {
+  if (gameState.phase !== 'playing' && gameState.phase !== 'paused') return;
+  if (gameState.phase === 'paused') {
+    gameState.phase = 'playing';
+    pauseVisible = false;
+    render();
+    return;
+  }
+  gameState.phase = 'paused';
+  pauseVisible = true;
+  mapVisible = false;
+  abilitiesVisible = false;
+  renderOverlays();
+}
+
+function renderOverlays() {
+  // Remove existing overlays
+  document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
+
+  if (mapVisible) renderMapOverlay();
+  if (abilitiesVisible) renderAbilitiesOverlay();
+  if (pauseVisible) renderPauseOverlay();
+}
+
+function renderMapOverlay() {
+  const overlay = document.createElement('div');
+  overlay.className = 'map-overlay dynamic-overlay';
+  overlay.innerHTML = `
+    <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:10px;color:hsl(75,80%,62%);z-index:1;">
+      地牢地图 (Tab关闭)
+    </div>
+    <div class="map-container" id="map-container"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) { toggleMap(); }
+  });
+
+  // Draw map
+  setTimeout(() => {
+    const container = document.getElementById('map-container');
+    if (!container) return;
+    drawMap(container);
+  }, 50);
+}
+
+function drawMap(container) {
+  const gridPos = gameState.gridPos;
+  if (!gridPos) return;
+
+  const rect = container.getBoundingClientRect();
+  const w = rect.width;
+  const h = rect.height;
+
+  // Find grid bounds
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (let i = 0; i < 13; i++) {
+    minX = Math.min(minX, gridPos[i].x);
+    minY = Math.min(minY, gridPos[i].y);
+    maxX = Math.max(maxX, gridPos[i].x);
+    maxY = Math.max(maxY, gridPos[i].y);
+  }
+  const cols = maxX - minX + 1;
+  const rows = maxY - minY + 1;
+  const cellSize = Math.min((w - 40) / cols, (h - 40) / rows, 64);
+  const offsetX = (w - cols * cellSize) / 2;
+  const offsetY = (h - rows * cellSize) / 2;
+
+  const typeColors = {
+    spawn: 'hsl(75,40%,88%)',
+    yellow: 'hsl(50,80%,55%)',
+    blue: 'hsl(210,70%,55%)',
+    green: 'hsl(140,60%,48%)',
+    orange: 'hsl(25,80%,55%)',
+    purple: 'hsl(280,60%,55%)',
+    king: 'hsl(0,70%,48%)',
+  };
+
+  // Build a lookup: grid key -> board index
+  const gridMap = {};
+  for (let i = 0; i < 13; i++) {
+    gridMap[`${gridPos[i].x},${gridPos[i].y}`] = i;
+  }
+
+  // Render grid cells
+  for (let gy = minY; gy <= maxY; gy++) {
+    for (let gx = minX; gx <= maxX; gx++) {
+      const key = `${gx},${gy}`;
+      const boardIdx = gridMap[key];
+      const left = offsetX + (gx - minX) * cellSize;
+      const top = offsetY + (gy - minY) * cellSize;
+
+      if (boardIdx !== undefined) {
+        const board = gameState.boards[boardIdx];
+        const isCurrent = boardIdx === gameState.currentBoardIndex;
+        const isKing = board.type === 'king';
+        const isSpawn = board.type === 'spawn';
+
+        // Determine dot color: dim if item collected or king captured
+        let dotColor = typeColors[board.type];
+        let dotClass = 'map-dot';
+        if (board.item && board.item.collected) {
+          dotColor = 'hsl(0,0%,40%)';
+          dotClass = 'map-dot map-dot-dim';
+        }
+        if (isKing) {
+          const kingAlive = board.enemies.some(e => e.type === 'king');
+          if (!kingAlive) {
+            dotColor = 'hsl(0,0%,40%)';
+            dotClass = 'map-dot map-dot-dim';
+          }
+        }
+
+        const cell = document.createElement('div');
+        cell.className = 'map-cell' + (isCurrent ? ' map-current' : '');
+        cell.style.left = left + 'px';
+        cell.style.top = top + 'px';
+        cell.style.width = (cellSize - 6) + 'px';
+        cell.style.height = (cellSize - 6) + 'px';
+
+        let inner = `<span class="${dotClass}" style="background:${dotColor};"></span>`;
+        if (isKing) inner += `<span class="map-crown">♚</span>`;
+        if (isSpawn) inner = `<span class="map-spawn">♙</span>`;
+
+        cell.innerHTML = inner;
+        cell.title = `${BOARD_LABELS[board.type]}`;
+        container.appendChild(cell);
+      } else {
+        // Empty grid cell (no room)
+        const cell = document.createElement('div');
+        cell.className = 'map-empty';
+        cell.style.left = left + 'px';
+        cell.style.top = top + 'px';
+        cell.style.width = (cellSize - 6) + 'px';
+        cell.style.height = (cellSize - 6) + 'px';
+        container.appendChild(cell);
+      }
+    }
+  }
+}
+
+function renderAbilitiesOverlay() {
+  const overlay = document.createElement('div');
+  overlay.className = 'dynamic-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:85;display:flex;align-items:flex-end;justify-content:center;padding-bottom:20px;';
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) toggleAbilities();
+  });
+
+  const ab = gameState.player.abilities;
+  const items = [
+    { name: '黄色能力', key: 'yellow', desc: '纵横向移动最大格数+1', value: `当前: ${1 + ab.yellow} 格 (已收集 ${ab.yellow}/4)`, color: 'hsl(50,80%,55%)' },
+    { name: '蓝色能力', key: 'blue', desc: '斜向移动最大格数+1', value: `当前: ${ab.green ? (1 + ab.blue) : 0} 格 (已收集 ${ab.blue}/4，需绿色解锁)`, color: 'hsl(210,70%,55%)' },
+    { name: '绿色能力', key: 'green', desc: '解锁斜向移动', value: ab.green ? '已解锁 ✓' : '未解锁', color: 'hsl(140,60%,48%)' },
+    { name: '橙色能力', key: 'orange', desc: '可跳过1个阻挡棋子', value: ab.orange ? '已解锁 ✓' : '未解锁', color: 'hsl(25,80%,55%)' },
+    { name: '紫色能力', key: 'purple', desc: '回合结束时随机吃掉左右相邻格内2回合内到达的敌子', value: ab.purple ? '已解锁 ✓' : '未解锁', color: 'hsl(280,60%,55%)' },
+  ];
+
+  overlay.innerHTML = `
+    <div class="ability-panel">
+      <div style="font-size:10px;color:hsl(75,80%,62%);margin-bottom:12px;text-align:center;">已解锁能力 (Ctrl关闭)</div>
+      ${items.map(item => `
+        <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:${item.color};flex-shrink:0;"></span>
+          <div class="min-w-0 flex-1">
+            <div style="color:${item.color};">${item.name}</div>
+            <div style="font-size:7px;color:hsl(75,20%,50%);">${item.desc}</div>
+            <div style="font-size:7px;color:hsl(75,40%,88%);">${item.value}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function renderPauseOverlay() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay dynamic-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>暂停</h2>
+      <button class="btn primary" onclick="resumeGame()" style="display:block;width:100%;margin-bottom:8px;">继续游戏</button>
+      <button class="btn" onclick="restartGame()" style="display:block;width:100%;margin-bottom:8px;">重新开始</button>
+      <button class="btn danger" onclick="quitToMenu()" style="display:block;width:100%;">退出游戏</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function resumeGame() {
+  gameState.phase = 'playing';
+  pauseVisible = false;
+  document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
+  render();
+}
+
+function quitToMenu() {
+  gameState.phase = 'menu';
+  pauseVisible = false;
+  document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
+  render();
+}
+
+// ============================================================
+// EVENT BINDING
+// ============================================================
+
+function bindEvents() {
+  // Cell clicks
+  document.querySelectorAll('.cell').forEach(cell => {
+    cell.addEventListener('click', () => {
+      if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
+      const row = parseInt(cell.dataset.row);
+      const col = parseInt(cell.dataset.col);
+      movePlayer(row, col);
+    });
+  });
+
+  // Buttons
+  const btnMap = document.getElementById('btn-map');
+  const btnAbilities = document.getElementById('btn-abilities');
+  const btnMenu = document.getElementById('btn-menu');
+  if (btnMap) btnMap.addEventListener('click', toggleMap);
+  if (btnAbilities) btnAbilities.addEventListener('click', toggleAbilities);
+  if (btnMenu) btnMenu.addEventListener('click', togglePause);
+
+  // D-pad
+  document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
+      const dir = btn.dataset.dir;
+      const dirMap = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
+      const [dr, dc] = dirMap[dir];
+      const nr = gameState.player.row + dr;
+      const nc = gameState.player.col + dc;
+      if (inBounds(nr, nc)) {
+        const isReachable = gameState.reachableCells.some(c => c.row === nr && c.col === nc);
+        if (isReachable) movePlayer(nr, nc);
+      }
+    });
+  });
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (gameState.phase === 'menu') {
+    if (e.key === 'Enter') { e.preventDefault(); initGame(); }
+    return;
+  }
+
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    if (gameState.phase === 'playing' || gameState.phase === 'paused') {
+      if (pauseVisible) { pauseVisible = false; document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove()); }
+      toggleMap();
+    }
+    return;
+  }
+
+  if (e.key === 'Control') {
+    e.preventDefault();
+    if (gameState.phase === 'playing' || gameState.phase === 'paused') {
+      if (mapVisible) { mapVisible = false; document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove()); }
+      toggleAbilities();
+    }
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (gameState.phase === 'playing' || gameState.phase === 'paused') {
+      if (mapVisible || abilitiesVisible) {
+        mapVisible = false;
+        abilitiesVisible = false;
+        document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
+        if (gameState.phase === 'paused') gameState.phase = 'playing';
+        render();
+        return;
+      }
+      togglePause();
+    }
+    return;
+  }
+
+  if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
+
+  const dirMap = {
+    ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
+    w: [-1, 0], s: [1, 0], a: [0, -1], d: [0, 1],
+    W: [-1, 0], S: [1, 0], A: [0, -1], D: [0, 1],
+  };
+
+  const delta = dirMap[e.key];
+  if (delta) {
+    e.preventDefault();
+    const [dr, dc] = delta;
+    const nr = gameState.player.row + dr;
+    const nc = gameState.player.col + dc;
+    if (inBounds(nr, nc)) {
+      const isReachable = gameState.reachableCells.some(c => c.row === nr && c.col === nc);
+      if (isReachable) movePlayer(nr, nc);
+    }
+  }
+});
+
+// Fix: update switchBoard call in movePlayer to pass old board index
+// We need to monkey-patch movePlayer... Actually let me just fix the function.
+
+// Override movePlayer to fix portal transition
+const originalMovePlayer = movePlayer;
+movePlayer = function(toRow, toCol) {
+  if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
+
+  const isReachable = gameState.reachableCells.some(c => c.row === toRow && c.col === toCol);
+  if (!isReachable) return;
+
+  const board = gameState.boards[gameState.currentBoardIndex];
+  const oldBoardIndex = gameState.currentBoardIndex;
+
+  // Check for portal
+  const portal = board.portalCells.find(p => p.row === toRow && p.col === toCol);
+
+  // Check for enemy capture
+  const enemyIdx = board.enemies.findIndex(e => e.row === toRow && e.col === toCol);
+  let capturedKing = false;
+  if (enemyIdx !== -1) {
+    const enemy = board.enemies[enemyIdx];
+    if (enemy.type === 'king') capturedKing = true;
+    board.enemies.splice(enemyIdx, 1);
+  }
+
+  // Check for item pickup
+  let itemPicked = null;
+  if (board.item && !board.item.collected && board.item.row === toRow && board.item.col === toCol) {
+    board.item.collected = true;
+    itemPicked = board.item.type;
+    applyAbility(itemPicked);
+  }
+
+  // Move player
+  gameState.player.row = toRow;
+  gameState.player.col = toCol;
+
+  // Check purple ability
+  if (gameState.player.abilities.purple) {
+    triggerPurpleAbility(board);
+  }
+
+  // Portal transition
+  if (portal) {
+    gameState.slideDirection = 'out-' + portal.direction;
+    gameState._lastSlideDir = portal.direction;
+    gameState.turn = 'enemy';
+    render();
+    setTimeout(() => {
+      switchBoardWithOld(oldBoardIndex, portal.targetBoard);
+      setTimeout(() => {
+        if (capturedKing) {
+          winGame();
+          return;
+        }
+        endPlayerTurn();
+      }, 350);
+    }, 300);
+    return;
+  }
+
+  if (capturedKing) {
+    winGame();
+    return;
+  }
+
+  endPlayerTurn();
+};
+
+// Toast helper
+function showToast(msg, color) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.style.cssText = `border-color: ${color || 'hsl(75,80%,62%)'};`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+// Override applyAbility to show toast
+const originalApplyAbility = applyAbility;
+applyAbility = function(type) {
+  originalApplyAbility(type);
+  const colorMap = {
+    yellow: 'hsl(50,80%,55%)',
+    blue: 'hsl(210,70%,55%)',
+    green: 'hsl(140,60%,48%)',
+    orange: 'hsl(25,80%,55%)',
+    purple: 'hsl(280,60%,55%)',
+  };
+  showToast(`${ABILITY_NAMES[type]} 已解锁！`, colorMap[type]);
+};
+
+// ============================================================
+// INIT
+// ============================================================
+
+loadBestScore();
+render();
+</script>
+</body>
+</html>
