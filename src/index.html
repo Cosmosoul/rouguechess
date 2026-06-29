@@ -446,7 +446,8 @@ let gameState = {
   phase: 'menu', // menu | playing | paused | over
   result: null,  // 'win' | 'lose' | null
   boards: [],
-  connections: [], // [{a: boardIndex, b: boardIndex, dirA: 'up'|'down'|'left'|'right', dirB: ...}]
+  connections: [],
+  gridPos: [],
   currentBoardIndex: 0,
   player: {
     boardIndex: 0,
@@ -454,9 +455,9 @@ let gameState = {
     col: 2,
     abilities: { yellow: 0, blue: 0, green: false, orange: false, purple: false },
   },
-  turn: 'player', // 'player' | 'enemy'
+  turn: 'player',
   turnNumber: 0,
-  reachableCells: [], // [{row, col}]
+  reachableCells: [],
   slideDirection: null,
   captureAnimating: false,
   justEnteredRoom: false,
@@ -464,6 +465,8 @@ let gameState = {
   difficulty: 'normal',
   bestScore: 0,
   wins: 0,
+  abilityCount: 0,
+  visitedRooms: new Set(),
 };
 
 // ============================================================
@@ -480,15 +483,12 @@ function inBounds(r, c) { return r >= 0 && r < 5 && c >= 0 && c < 5; }
 // ============================================================
 
 function generateDungeon(difficulty) {
-  // Step 1: Grow 13 rooms on a 2D orthogonal grid
-  const gridPos = []; // gridPos[i] = {x, y}
+  const gridPos = [];
   const occupied = new Set();
 
-  // Place spawn at origin
   gridPos[0] = { x: 0, y: 0 };
   occupied.add('0,0');
 
-  // Frontier: empty cells adjacent to occupied cells
   const frontier = [];
   const dirs = [[0, -1], [0, 1], [-1, 0], [1, 0]];
 
@@ -503,15 +503,12 @@ function generateDungeon(difficulty) {
   }
   addFrontier(0, 0);
 
-  // Grow remaining 12 rooms with balanced expansion
   for (let i = 1; i < 13; i++) {
-    // Prefer frontier cells that keep the shape balanced (closer to origin)
     frontier.sort((a, b) => {
       const distA = Math.abs(a.x) + Math.abs(a.y);
       const distB = Math.abs(b.x) + Math.abs(b.y);
       return distA - distB;
     });
-    // Pick from the closest 60% of frontier cells for balanced growth
     const poolSize = Math.max(1, Math.ceil(frontier.length * 0.6));
     const idx = randInt(0, poolSize - 1);
     const cell = frontier[idx];
@@ -521,7 +518,6 @@ function generateDungeon(difficulty) {
     addFrontier(cell.x, cell.y);
   }
 
-  // Center the spawn: shift all coordinates so spawn is near the middle
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (let i = 0; i < 13; i++) {
     minX = Math.min(minX, gridPos[i].x);
@@ -536,34 +532,29 @@ function generateDungeon(difficulty) {
     gridPos[i].y -= cy;
   }
 
-  // Step 2: Build connections from adjacent grid cells
   const connections = [];
   for (let i = 0; i < 13; i++) {
     for (let j = i + 1; j < 13; j++) {
       const dx = gridPos[j].x - gridPos[i].x;
       const dy = gridPos[j].y - gridPos[i].y;
       if (Math.abs(dx) + Math.abs(dy) !== 1) continue;
-      // Orthogonally adjacent: determine edges
       let edgeA, edgeB;
-      if (dy === -1) { edgeA = 0; edgeB = 2; }      // j above i: i.up <-> j.down
-      else if (dy === 1) { edgeA = 2; edgeB = 0; }  // j below i: i.down <-> j.up
-      else if (dx === -1) { edgeA = 3; edgeB = 1; } // j left of i: i.left <-> j.right
-      else { edgeA = 1; edgeB = 3; }                // j right of i: i.right <-> j.left
+      if (dy === -1) { edgeA = 0; edgeB = 2; }
+      else if (dy === 1) { edgeA = 2; edgeB = 0; }
+      else if (dx === -1) { edgeA = 3; edgeB = 1; }
+      else { edgeA = 1; edgeB = 3; }
       const col = randInt(1, 3);
       connections.push({ a: i, edgeA, b: j, edgeB, col });
     }
   }
 
-  // Step 3: Assign types, ensure king is at least 2 steps from spawn
   const types = shuffle([...BOARD_TYPES]);
   const spawnIdx = types.indexOf('spawn');
   if (spawnIdx !== 0) { [types[0], types[spawnIdx]] = [types[spawnIdx], types[0]]; }
 
-  // Move king away from spawn if too close
   const kingIdx = types.indexOf('king');
   const kingDist = Math.abs(gridPos[kingIdx].x - gridPos[0].x) + Math.abs(gridPos[kingIdx].y - gridPos[0].y);
   if (kingDist < 2) {
-    // Find a room far enough from spawn to swap with
     const candidates = [];
     for (let i = 1; i < 13; i++) {
       if (i === kingIdx) continue;
@@ -576,18 +567,15 @@ function generateDungeon(difficulty) {
     }
   }
 
-  // Step 4: Generate boards with difficulty
   const boards = [];
   for (let i = 0; i < 13; i++) {
-    boards.push(generateBoard(i, types[i], connections, difficulty));
+    boards.push(generateBoard(i, types[i], connections, difficulty, i === 0));
   }
 
   return { boards, connections, types, gridPos };
 }
 
 function getPortalPos(edge, col) {
-  // edge: 0=up, 1=right, 2=down, 3=left
-  // col: column index for up/down, row index for left/right
   switch (edge) {
     case 0: return { row: 0, col };
     case 2: return { row: 4, col };
@@ -604,9 +592,7 @@ function edgeToDir(edge) {
 
 function isPortalSafe(portalCells, enemies) {
   for (const p of portalCells) {
-    // Portal cell itself must be empty
     if (enemies.some(e => e.row === p.row && e.col === p.col)) return false;
-    // 8 surrounding cells must be empty
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
         if (dr === 0 && dc === 0) continue;
@@ -619,7 +605,7 @@ function isPortalSafe(portalCells, enemies) {
   return true;
 }
 
-function generateBoard(index, type, allConnections, difficulty) {
+function generateBoard(index, type, allConnections, difficulty, isSpawn) {
   const myConns = allConnections.filter(c => c.a === index || c.b === index);
 
   const portalCells = [];
@@ -639,17 +625,16 @@ function generateBoard(index, type, allConnections, difficulty) {
     }
   }
 
-  // Generate enemies with portal safety
-  let enemies;
-  let attempts = 0;
-
-  // Difficulty config: [pawnCount, advancedCount]
   const diffConfig = {
     easy:   [2, 1],
-    normal: [2, 2],
+    normal: [2, 1],
     hard:   [2, 3],
   };
   const [pawnCount, advancedCount] = diffConfig[difficulty] || diffConfig.normal;
+
+  let enemies;
+  let attempts = 0;
+  let spawnSafe = false;
 
   do {
     enemies = [];
@@ -659,7 +644,7 @@ function generateBoard(index, type, allConnections, difficulty) {
     for (let i = 0; i < pawnCount; i++) {
       const pos = randomEmptyCell(occupied);
       occupied.add(`${pos.row},${pos.col}`);
-      enemies.push({ type: 'pawn', color: 'black', row: pos.row, col: pos.col, lastMoveTurn: -999 });
+      enemies.push({ type: 'pawn', color: 'black', row: pos.row, col: pos.col, lastMoveTurn: -999, alive: true, respawnable: true });
     }
 
     const advancedTypes = ['bishop', 'queen', 'rook', 'knight'];
@@ -667,19 +652,26 @@ function generateBoard(index, type, allConnections, difficulty) {
       const chosen = advancedTypes[i % advancedTypes.length];
       const apos = randomEmptyCell(occupied);
       occupied.add(`${apos.row},${apos.col}`);
-      enemies.push({ type: chosen, color: 'black', row: apos.row, col: apos.col, lastMoveTurn: -999 });
+      enemies.push({ type: chosen, color: 'black', row: apos.row, col: apos.col, lastMoveTurn: -999, alive: true, respawnable: false });
     }
 
     if (type === 'king') {
       const kpos = randomEmptyCell(occupied);
       occupied.add(`${kpos.row},${kpos.col}`);
-      enemies.push({ type: 'king', color: 'black', row: kpos.row, col: kpos.col, lastMoveTurn: -999 });
+      enemies.push({ type: 'king', color: 'black', row: kpos.row, col: kpos.col, lastMoveTurn: -999, alive: true, respawnable: false });
       const qpos = randomEmptyCell(occupied);
       occupied.add(`${qpos.row},${qpos.col}`);
-      enemies.push({ type: 'queen', color: 'black', row: qpos.row, col: qpos.col, lastMoveTurn: -999 });
+      enemies.push({ type: 'queen', color: 'black', row: qpos.row, col: qpos.col, lastMoveTurn: -999, alive: true, respawnable: false });
     }
+
     attempts++;
-  } while (!isPortalSafe(portalCells, enemies) && attempts < 100);
+
+    if (isSpawn) {
+      spawnSafe = checkSpawnSafety(enemies);
+    } else {
+      spawnSafe = true;
+    }
+  } while ((!isPortalSafe(portalCells, enemies) || !spawnSafe) && attempts < 200);
 
   let item = null;
   if (type !== 'spawn' && type !== 'king') {
@@ -691,7 +683,89 @@ function generateBoard(index, type, allConnections, difficulty) {
     }
   }
 
-  return { index, type, portalCells, enemies, item };
+  const initialEnemies = enemies.map(e => ({ ...e }));
+
+  return { index, type, portalCells, enemies, item, initialEnemies };
+}
+
+function checkSpawnSafety(enemies) {
+  const playerPos = { row: 2, col: 2 };
+  const orthoDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  const safeCells = [];
+
+  for (const [dr, dc] of orthoDirs) {
+    const nr = playerPos.row + dr;
+    const nc = playerPos.col + dc;
+    if (!inBounds(nr, nc)) continue;
+    if (enemies.some(e => e.row === nr && e.col === nc)) continue;
+    let isSafe = true;
+    for (const enemy of enemies) {
+      const moves = getEnemyMovesForCheck(enemy, nr, nc);
+      if (moves.some(m => m.row === nr && m.col === nc)) {
+        isSafe = false;
+        break;
+      }
+    }
+    if (isSafe) safeCells.push({ row: nr, col: nc });
+  }
+  return safeCells.length >= 1;
+}
+
+function getEnemyMovesForCheck(enemy, playerRow, playerCol) {
+  const moves = [];
+  const { type, row, col } = enemy;
+
+  function inBounds(r, c) { return r >= 0 && r < 5 && c >= 0 && c < 5; }
+
+  function addLineMoves(dirs, maxSteps = 5) {
+    for (const [dr, dc] of dirs) {
+      for (let step = 1; step <= maxSteps; step++) {
+        const nr = row + dr * step;
+        const nc = col + dc * step;
+        if (!inBounds(nr, nc)) break;
+        moves.push({ row: nr, col: nc });
+        if (nr === playerRow && nc === playerCol) break;
+      }
+    }
+  }
+
+  switch (type) {
+    case 'pawn': {
+      const moveDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      const capDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+      for (const [dr, dc] of moveDirs) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc)) moves.push({ row: nr, col: nc });
+      }
+      for (const [dr, dc] of capDirs) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc) && nr === playerRow && nc === playerCol) {
+          moves.push({ row: nr, col: nc });
+        }
+      }
+      break;
+    }
+    case 'bishop': addLineMoves([[-1, -1], [-1, 1], [1, -1], [1, 1]]); break;
+    case 'rook': addLineMoves([[-1, 0], [1, 0], [0, -1], [0, 1]]); break;
+    case 'queen': addLineMoves([[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]]); break;
+    case 'knight': {
+      const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
+      for (const [dr, dc] of knightMoves) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc)) moves.push({ row: nr, col: nc });
+      }
+      break;
+    }
+    case 'king': {
+      const kingDirs = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+      for (const [dr, dc] of kingDirs) {
+        const nr = row + dr, nc = col + dc;
+        if (inBounds(nr, nc)) moves.push({ row: nr, col: nc });
+      }
+      break;
+    }
+  }
+  return moves;
 }
 
 function randomEmptyCell(occupied) {
@@ -701,10 +775,7 @@ function randomEmptyCell(occupied) {
       if (!occupied.has(`${r},${c}`)) candidates.push({ row: r, col: c });
     }
   }
-  if (candidates.length === 0) {
-    // Fallback: return center
-    return { row: 2, col: 2 };
-  }
+  if (candidates.length === 0) return { row: 2, col: 2 };
   return pick(candidates);
 }
 
@@ -724,12 +795,9 @@ function getPlayerMoves(state) {
   const queue = [{ row, col, jumped: false, orthoSteps: 0, diagSteps: 0 }];
   visited.add(`${row},${col}`);
 
-  // BFS for orthogonal + diagonal moves
   const orthoDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   const diagDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
 
-  // We need to handle multi-step moves carefully
-  // For orthogonal: up to maxOrtho steps in each direction
   for (const [dr, dc] of orthoDirs) {
     let jumped = false;
     for (let step = 1; step <= maxOrtho; step++) {
@@ -738,9 +806,7 @@ function getPlayerMoves(state) {
       if (!inBounds(nr, nc)) break;
       const cellOccupant = getEnemyAt(board, nr, nc);
       if (cellOccupant) {
-        // Always can capture the enemy at this cell
         reachable.push({ row: nr, col: nc });
-        // If orange ability and haven't jumped yet and there's room to continue, also allow jumping over
         if (!jumped && canJump && step < maxOrtho) {
           jumped = true;
           continue;
@@ -751,7 +817,6 @@ function getPlayerMoves(state) {
     }
   }
 
-  // Diagonal moves
   for (const [dr, dc] of diagDirs) {
     let jumped = false;
     for (let step = 1; step <= maxDiag; step++) {
@@ -771,7 +836,6 @@ function getPlayerMoves(state) {
     }
   }
 
-  // Deduplicate
   const unique = [];
   const seen = new Set();
   for (const r of reachable) {
@@ -782,7 +846,7 @@ function getPlayerMoves(state) {
 }
 
 function getEnemyAt(board, row, col) {
-  return board.enemies.find(e => e.row === row && e.col === col) || null;
+  return board.enemies.find(e => e.alive !== false && e.row === row && e.col === col) || null;
 }
 
 function getPieceAt(board, row, col, playerRow, playerCol) {
@@ -796,8 +860,8 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
 
   const allEnemies = board.enemies;
   function isBlocked(r, c) {
-    if (r === playerRow && c === playerCol) return false; // can capture player
-    return allEnemies.some(e => e !== enemy && e.row === r && e.col === c);
+    if (r === playerRow && c === playerCol) return false;
+    return allEnemies.some(e => e !== enemy && e.alive !== false && e.row === r && e.col === c);
   }
 
   function addLineMoves(dirs, maxSteps = 5) {
@@ -808,14 +872,13 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
         if (!inBounds(nr, nc)) break;
         if (isBlocked(nr, nc)) break;
         moves.push({ row: nr, col: nc });
-        if (nr === playerRow && nc === playerCol) break; // stop after capturing player
+        if (nr === playerRow && nc === playerCol) break;
       }
     }
   }
 
   switch (type) {
     case 'pawn': {
-      // Black pawn: can move up/down/left/right 1 step, capture diagonally
       const moveDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
       const capDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
       for (const [dr, dc] of moveDirs) {
@@ -867,7 +930,7 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
 }
 
 // ============================================================
-// AI
+// AI (优化后的进攻逻辑)
 // ============================================================
 
 function aiMove(state) {
@@ -875,46 +938,64 @@ function aiMove(state) {
   const { row: pr, col: pc } = state.player;
   const allMoves = [];
 
-  // Find king and check if in danger
-  const king = board.enemies.find(e => e.type === 'king');
-  const kingInDanger = king && state.reachableCells.some(c => c.row === king.row && c.col === king.col);
+  const king = board.enemies.find(e => e.type === 'king' && e.alive !== false);
+  const kingAlive = !!king;
+  const kingInDanger = kingAlive && state.reachableCells.some(c => c.row === king.row && c.col === king.col);
 
   for (const enemy of board.enemies) {
+    if (enemy.alive === false) continue;
     const moves = getEnemyMoves(board, enemy, pr, pc);
     for (const move of moves) {
       let score = 0;
 
-      // Priority 1: Kill player
+      // 最高优先级：直接吃掉玩家
       if (move.row === pr && move.col === pc) {
-        if (state.justEnteredRoom) continue;
-        score = 10000;
-      }
-      // Priority 2: Protect king
-      else if (kingInDanger && enemy.type === 'king') {
-        const oldDist = Math.abs(king.row - pr) + Math.abs(king.col - pc);
-        const newDist = Math.abs(move.row - pr) + Math.abs(move.col - pc);
-        if (newDist > oldDist) {
-          score = 5000 + (newDist - oldDist) * 100;
+        score = 1000000;
+      } else {
+        if (kingAlive) {
+          // 国王存活
+          if (enemy.type === 'king') {
+            // 国王移动：增加与玩家的距离
+            const oldDist = Math.abs(enemy.row - pr) + Math.abs(enemy.col - pc);
+            const newDist = Math.abs(move.row - pr) + Math.abs(move.col - pc);
+            if (newDist > oldDist) {
+              score += 50000 + (newDist - oldDist) * 1000;
+            } else {
+              score += 1000;
+            }
+          } else {
+            // 其他敌人
+            if (kingInDanger) {
+              // 玩家能吃掉国王 → 优先保护国王
+              // 靠近国王加分
+              const distToKing = Math.abs(move.row - king.row) + Math.abs(move.col - king.col);
+              score += (10 - distToKing) * 500;
+              // 如果移动到玩家到国王的路径上，额外加分
+              const dr = king.row - pr;
+              const dc = king.col - pc;
+              if (dr === 0 || dc === 0 || Math.abs(dr) === Math.abs(dc)) {
+                const steps = Math.max(Math.abs(dr), Math.abs(dc));
+                for (let s = 1; s < steps; s++) {
+                  const checkR = pr + dr * s / steps;
+                  const checkC = pc + dc * s / steps;
+                  if (Math.abs(checkR - move.row) < 0.1 && Math.abs(checkC - move.col) < 0.1) {
+                    score += 30000;
+                    break;
+                  }
+                }
+              }
+            }
+            // 正常靠近玩家评分
+            const oldDist = Math.abs(enemy.row - pr) + Math.abs(enemy.col - pc);
+            const newDist = Math.abs(move.row - pr) + Math.abs(move.col - pc);
+            score += (oldDist - newDist) * 10 + randInt(0, 5);
+          }
         } else {
-          score = 1000;
+          // 国王已死，所有棋子优先靠近玩家
+          const oldDist = Math.abs(enemy.row - pr) + Math.abs(enemy.col - pc);
+          const newDist = Math.abs(move.row - pr) + Math.abs(move.col - pc);
+          score = (oldDist - newDist) * 10 + randInt(0, 5);
         }
-      }
-      else if (kingInDanger && enemy.type !== 'king') {
-        const distToPlayer = Math.abs(move.row - pr) + Math.abs(move.col - pc);
-        const distToKing = Math.abs(move.row - king.row) + Math.abs(move.col - king.col);
-        const playerKingDist = Math.abs(pr - king.row) + Math.abs(pc - king.col);
-        if (distToPlayer + distToKing <= playerKingDist + 1) {
-          score = 3000 + randInt(0, 200);
-        }
-        const oldDist = Math.abs(enemy.row - pr) + Math.abs(enemy.col - pc);
-        const newDist = Math.abs(move.row - pr) + Math.abs(move.col - pc);
-        score = Math.max(score, (oldDist - newDist) * 10 + randInt(0, 3));
-      }
-      // Priority 3: Approach player
-      else {
-        const oldDist = Math.abs(enemy.row - pr) + Math.abs(enemy.col - pc);
-        const newDist = Math.abs(move.row - pr) + Math.abs(move.col - pc);
-        score = (oldDist - newDist) * 10 + randInt(0, 5);
       }
 
       allMoves.push({ enemy, move, score });
@@ -956,12 +1037,169 @@ function initGame(difficulty) {
     slideDirection: null,
     captureAnimating: false,
     justEnteredRoom: false,
-    bestScore: gameState.bestScore,
-    wins: gameState.wins,
+    animatingPiece: null,
+    bestScore: gameState.bestScore || 0,
+    wins: gameState.wins || 0,
+    abilityCount: 0,
+    visitedRooms: new Set(),
   };
+  gameState.visitedRooms.add(0);
   gameState.reachableCells = getPlayerMoves(gameState);
   loadBestScore();
   render();
+}
+
+function applyAbility(type) {
+  switch (type) {
+    case 'yellow': gameState.player.abilities.yellow = Math.min(4, gameState.player.abilities.yellow + 1); break;
+    case 'blue':   gameState.player.abilities.blue = Math.min(4, gameState.player.abilities.blue + 1); break;
+    case 'green':  gameState.player.abilities.green = true; break;
+    case 'orange': gameState.player.abilities.orange = true; break;
+    case 'purple': gameState.player.abilities.purple = true; break;
+  }
+
+  gameState.abilityCount++;
+  const colorMap = {
+    yellow: 'hsl(50,80%,55%)',
+    blue: 'hsl(210,70%,55%)',
+    green: 'hsl(140,60%,48%)',
+    orange: 'hsl(25,80%,55%)',
+    purple: 'hsl(280,60%,55%)',
+  };
+  showToast(`${ABILITY_NAMES[type]} 已解锁！ (${gameState.abilityCount}/3)`, colorMap[type]);
+
+  if (gameState.abilityCount % 3 === 0) {
+    enhanceUnvisitedRooms();
+  }
+}
+
+// 增强所有未访问房间（可累加）
+function enhanceUnvisitedRooms() {
+  const unvisited = [];
+  for (let i = 0; i < 13; i++) {
+    if (!gameState.visitedRooms.has(i)) {
+      unvisited.push(i);
+    }
+  }
+  if (unvisited.length === 0) {
+    showToast('所有房间已访问，无法增强！', 'hsl(75,20%,50%)');
+    return;
+  }
+
+  for (const idx of unvisited) {
+    const board = gameState.boards[idx];
+    if (!board) continue;
+    const isAdvanced = Math.random() < 0.5;
+    const types = isAdvanced ? ['bishop', 'queen', 'rook', 'knight'] : ['pawn'];
+    const type = pick(types);
+    const occupied = new Set();
+    board.enemies.forEach(e => occupied.add(`${e.row},${e.col}`));
+    board.portalCells.forEach(p => occupied.add(`${p.row},${p.col}`));
+    if (board.item && !board.item.collected) occupied.add(`${board.item.row},${board.item.col}`);
+    const pos = randomEmptyCell(occupied);
+    if (pos) {
+      const respawnable = type === 'pawn';
+      board.enemies.push({
+        type: type,
+        color: 'black',
+        row: pos.row,
+        col: pos.col,
+        lastMoveTurn: -999,
+        alive: true,
+        respawnable: respawnable,
+      });
+      board.initialEnemies.push({
+        type: type,
+        color: 'black',
+        row: pos.row,
+        col: pos.col,
+        lastMoveTurn: -999,
+        alive: true,
+        respawnable: respawnable,
+      });
+    }
+  }
+  const label = gameState.difficulty === 'normal' ? '普通' : gameState.difficulty === 'hard' ? '困难' : '简单';
+  showToast(`⚔ 房间增强！${unvisited.length}个未访问房间新增敌人 (${label})`, 'hsl(75,80%,62%)');
+}
+
+function switchBoardWithOld(oldBoardIndex, targetIndex) {
+  const newBoard = gameState.boards[targetIndex];
+  const entryPortal = newBoard.portalCells.find(p => p.targetBoard === oldBoardIndex);
+
+  gameState.visitedRooms.add(targetIndex);
+
+  if (gameState.difficulty === 'normal' || gameState.difficulty === 'hard') {
+    respawnPawns(targetIndex);
+  }
+
+  gameState.currentBoardIndex = targetIndex;
+  gameState.player.boardIndex = targetIndex;
+
+  if (entryPortal) {
+    gameState.player.row = entryPortal.row;
+    gameState.player.col = entryPortal.col;
+  } else {
+    const anyPortal = newBoard.portalCells[0];
+    if (anyPortal) {
+      gameState.player.row = anyPortal.row;
+      gameState.player.col = anyPortal.col;
+    } else {
+      gameState.player.row = 2;
+      gameState.player.col = 2;
+    }
+  }
+
+  const oppMap = { up: 'down', down: 'up', left: 'right', right: 'left' };
+  gameState.slideDirection = 'in-' + (oppMap[gameState._lastSlideDir] || 'up');
+  gameState.justEnteredRoom = true;
+  render();
+
+  requestAnimationFrame(() => {
+    const boardEl = document.getElementById('board-grid');
+    if (boardEl) {
+      boardEl.offsetHeight;
+      boardEl.classList.remove('slide-in-up', 'slide-in-down', 'slide-in-left', 'slide-in-right');
+      boardEl.classList.add('slide-reset');
+    }
+    setTimeout(() => {
+      gameState.slideDirection = null;
+    }, 320);
+  });
+}
+
+function respawnPawns(boardIndex) {
+  const board = gameState.boards[boardIndex];
+  if (!board) return;
+
+  const aliveEnemies = board.enemies.filter(e => e.alive !== false);
+  const initialPawns = board.initialEnemies.filter(e => e.type === 'pawn');
+  const alivePawns = aliveEnemies.filter(e => e.type === 'pawn');
+
+  const missingCount = initialPawns.length - alivePawns.length;
+  if (missingCount <= 0) return;
+
+  const occupied = new Set();
+  aliveEnemies.forEach(e => occupied.add(`${e.row},${e.col}`));
+  board.portalCells.forEach(p => occupied.add(`${p.row},${p.col}`));
+  if (board.item && !board.item.collected) occupied.add(`${board.item.row},${board.item.col}`);
+
+  for (let i = 0; i < missingCount; i++) {
+    const pos = randomEmptyCell(occupied);
+    if (pos) {
+      const newPawn = {
+        type: 'pawn',
+        color: 'black',
+        row: pos.row,
+        col: pos.col,
+        lastMoveTurn: -999,
+        alive: true,
+        respawnable: true,
+      };
+      board.enemies.push(newPawn);
+      occupied.add(`${pos.row},${pos.col}`);
+    }
+  }
 }
 
 function movePlayer(toRow, toCol) {
@@ -971,21 +1209,17 @@ function movePlayer(toRow, toCol) {
   if (!isReachable) return;
 
   const board = gameState.boards[gameState.currentBoardIndex];
-  const { row: fromRow, col: fromCol } = gameState.player;
+  const oldBoardIndex = gameState.currentBoardIndex;
 
-  // Check for portal
   const portal = board.portalCells.find(p => p.row === toRow && p.col === toCol);
 
-  // Check for enemy capture
-  const enemyIdx = board.enemies.findIndex(e => e.row === toRow && e.col === toCol);
   let capturedKing = false;
-  if (enemyIdx !== -1) {
-    const enemy = board.enemies[enemyIdx];
-    if (enemy.type === 'king') capturedKing = true;
-    board.enemies.splice(enemyIdx, 1);
+  const enemyTarget = board.enemies.find(e => e.alive !== false && e.row === toRow && e.col === toCol);
+  if (enemyTarget) {
+    if (enemyTarget.type === 'king') capturedKing = true;
+    enemyTarget.alive = false;
   }
 
-  // Check for item pickup
   let itemPicked = null;
   if (board.item && !board.item.collected && board.item.row === toRow && board.item.col === toCol) {
     board.item.collected = true;
@@ -993,29 +1227,29 @@ function movePlayer(toRow, toCol) {
     applyAbility(itemPicked);
   }
 
-  // Move player
   gameState.animatingPiece = { fromRow: gameState.player.row, fromCol: gameState.player.col, toRow, toCol, color: 'white' };
   gameState.player.row = toRow;
   gameState.player.col = toCol;
-  gameState.justEnteredRoom = false;
 
-  // Check purple ability (eat passing pawn)
   if (gameState.player.abilities.purple) {
     triggerPurpleAbility(board);
   }
 
-  // Portal transition
   if (portal) {
-    gameState.slideDirection = portal.direction;
-    setTimeout(() => {
-      switchBoard(portal.targetBoard);
-      if (capturedKing) {
-        winGame();
-        return;
-      }
-      endPlayerTurn();
-    }, 300);
+    gameState.slideDirection = 'out-' + portal.direction;
+    gameState._lastSlideDir = portal.direction;
+    gameState.turn = 'enemy';
     render();
+    setTimeout(() => {
+      switchBoardWithOld(oldBoardIndex, portal.targetBoard);
+      setTimeout(() => {
+        if (capturedKing) {
+          winGame();
+          return;
+        }
+        endPlayerTurn();
+      }, 350);
+    }, 300);
     return;
   }
 
@@ -1024,23 +1258,41 @@ function movePlayer(toRow, toCol) {
     return;
   }
 
-  gameState.justEnteredRoom = false;
   endPlayerTurn();
+}
+
+function triggerPurpleAbility(board) {
+  const { row, col } = gameState.player;
+  const candidates = [];
+  const checkPositions = [[row, col - 1], [row, col + 1]];
+  for (const [r, c] of checkPositions) {
+    if (!inBounds(r, c)) continue;
+    const enemy = getEnemyAt(board, r, c);
+    if (enemy && enemy.lastMoveTurn >= gameState.turnNumber - 1) {
+      candidates.push(enemy);
+    }
+  }
+  if (candidates.length > 0) {
+    const target = pick(candidates);
+    if (target) {
+      target.alive = false;
+    }
+  }
 }
 
 function endPlayerTurn() {
   gameState.turn = 'enemy';
   render();
 
-  // AI turn after a short delay
   setTimeout(() => {
     if (gameState.phase !== 'playing') return;
+    // 确保 AI 可以正常行动（移除刚进入房间的限制）
+    gameState.justEnteredRoom = false;
     const result = aiMove(gameState);
     if (result) {
       const { enemy, move } = result;
       const board = gameState.boards[gameState.currentBoardIndex];
 
-      // Check if AI captures player
       if (move.row === gameState.player.row && move.col === gameState.player.col) {
         gameState.animatingPiece = { fromRow: enemy.row, fromCol: enemy.col, toRow: move.row, toCol: move.col, color: 'black' };
         enemy.row = move.row;
@@ -1065,78 +1317,6 @@ function endPlayerTurn() {
     gameState.reachableCells = getPlayerMoves(gameState);
     render();
   }, 400);
-}
-
-function switchBoardWithOld(oldBoardIndex, targetIndex) {
-  const newBoard = gameState.boards[targetIndex];
-  const entryPortal = newBoard.portalCells.find(p => p.targetBoard === oldBoardIndex);
-
-  gameState.currentBoardIndex = targetIndex;
-  gameState.player.boardIndex = targetIndex;
-
-  if (entryPortal) {
-    gameState.player.row = entryPortal.row;
-    gameState.player.col = entryPortal.col;
-  } else {
-    const anyPortal = newBoard.portalCells[0];
-    if (anyPortal) {
-      gameState.player.row = anyPortal.row;
-      gameState.player.col = anyPortal.col;
-    } else {
-      gameState.player.row = 2;
-      gameState.player.col = 2;
-    }
-  }
-
-  // Set slide-in direction
-  const oppMap = { up: 'down', down: 'up', left: 'right', right: 'left' };
-  gameState.slideDirection = 'in-' + (oppMap[gameState._lastSlideDir] || 'up');
-  gameState.justEnteredRoom = true;
-  render();
-
-  // Trigger CSS transition: force reflow then change class
-  requestAnimationFrame(() => {
-    const boardEl = document.getElementById('board-grid');
-    if (boardEl) {
-      boardEl.offsetHeight;
-      boardEl.classList.remove('slide-in-up', 'slide-in-down', 'slide-in-left', 'slide-in-right');
-      boardEl.classList.add('slide-reset');
-    }
-    setTimeout(() => {
-      gameState.slideDirection = null;
-    }, 320);
-  });
-}
-
-// Fix: update movePlayer to use old board index
-// Actually, let me refactor the portal transition logic
-
-function applyAbility(type) {
-  switch (type) {
-    case 'yellow': gameState.player.abilities.yellow = Math.min(4, gameState.player.abilities.yellow + 1); break;
-    case 'blue':   gameState.player.abilities.blue = Math.min(4, gameState.player.abilities.blue + 1); break;
-    case 'green':  gameState.player.abilities.green = true; break;
-    case 'orange': gameState.player.abilities.orange = true; break;
-    case 'purple': gameState.player.abilities.purple = true; break;
-  }
-}
-
-function triggerPurpleAbility(board) {
-  const { row, col } = gameState.player;
-  const candidates = [];
-  const checkPositions = [[row, col - 1], [row, col + 1]];
-  for (const [r, c] of checkPositions) {
-    if (!inBounds(r, c)) continue;
-    const enemy = getEnemyAt(board, r, c);
-    if (enemy && enemy.lastMoveTurn >= gameState.turnNumber - 1) {
-      candidates.push(enemy);
-    }
-  }
-  if (candidates.length > 0) {
-    const target = pick(candidates);
-    const idx = board.enemies.indexOf(target);
-    if (idx !== -1) board.enemies.splice(idx, 1);
-  }
 }
 
 function winGame() {
@@ -1195,21 +1375,37 @@ function render() {
 function renderMenu() {
   loadBestScore();
   return `
-    <div class="text-center" style="padding-top: 12vh;">
-      <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 8px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
+    <div class="text-center" style="padding-top: 6vh; max-height: 100vh; overflow-y: auto;">
+      <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
       <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">肉鸽国际象棋</h1>
-      <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 28px; line-height: 2;">
+      <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 16px; line-height: 2;">
         探索13个棋盘房间 · 收集能力 · 击败国王
       </p>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:20px;">
-        <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单 — 每房 2兵+1将</button>
-        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">普通 — 每房 2兵+2将（推荐）</button>
-        <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难 — 每房 2兵+3将</button>
+
+      <div style="background: hsl(75 12% 16%); border: 2px solid hsl(75 15% 22%); border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; text-align: left; max-height: 260px; overflow-y: auto;">
+        <div style="font-size: 8px; color: hsl(75 40% 88%); line-height: 2.2;">
+          <div style="color: hsl(75 80% 62%); font-size: 9px; margin-bottom: 6px;">📖 玩法介绍</div>
+          <div>• 操控白色棋子 <span style="color:hsl(75,80%,62%);">♙</span> 在5×5棋盘上移动</div>
+          <div>• 击败 <span style="color:hsl(0,70%,55%);">黑色国王 ♚</span> 即可获胜</div>
+          <div>• 收集 <span style="color:hsl(50,80%,55%);">黄</span><span style="color:hsl(210,70%,55%);">蓝</span><span style="color:hsl(140,60%,48%);">绿</span><span style="color:hsl(25,80%,55%);">橙</span><span style="color:hsl(280,60%,55%);">紫</span> 能力提升移动力</div>
+          <div style="color: hsl(75 20% 50%);">  - 黄色：纵横向步数+1（最多+4）</div>
+          <div style="color: hsl(75 20% 50%);">  - 蓝色：斜向步数+1（需绿色解锁）</div>
+          <div style="color: hsl(75 20% 50%);">  - 绿色：解锁斜向移动</div>
+          <div style="color: hsl(75 20% 50%);">  - 橙色：可跳过1个阻挡棋子</div>
+          <div style="color: hsl(75 20% 50%);">  - 紫色：回合结束吃掉左右相邻的敌子</div>
+          <div>• 每获得 <span style="color:hsl(75,80%,62%);">3个能力</span>，尚未到达的房间将新增敌人</div>
+          <div>• <span style="color:hsl(0,65%,48%);">将领</span> 永久死亡不重生，<span style="color:hsl(140,60%,48%);">士兵</span> 在普通/困难模式下离房回归后重生</div>
+          <div>• 地图仅显示已访问的房间</div>
+          <div style="color: hsl(75 20% 50%);">• 快捷键：Tab地图 | Ctrl能力 | Esc菜单 | 方向键/WASD移动</div>
+        </div>
       </div>
-      <p style="font-size: 8px; color: hsl(75 20% 50%); margin-top: 20px; line-height: 2;">
-        最高胜场: ${gameState.bestScore}
-      </p>
-      <div style="margin-top: 28px; font-size: 7px; color: hsl(75 15% 35%); line-height: 2;">
+
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;">
+        <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单 </button>
+        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">普通（推荐）</button>
+        <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难 </button>
+      </div>
+      <div style="margin-top: 16px; font-size: 7px; color: hsl(75 15% 35%); line-height: 2;">
         Tab 地图 | Ctrl 能力 | Esc 菜单<br>
         方向键/点击 移动
       </div>
@@ -1253,7 +1449,6 @@ function renderGame() {
     }
   }
 
-  // Build board cells
   let cellsHTML = '';
   for (let r = 0; r < 5; r++) {
     for (let c = 0; c < 5; c++) {
@@ -1277,7 +1472,7 @@ function renderGame() {
 
       if (isPlayer) {
         if (gameState.captureAnimating) {
-          const capEnemy = board.enemies.find(e => e.row === pr && e.col === pc);
+          const capEnemy = board.enemies.find(e => e.alive !== false && e.row === pr && e.col === pc);
           if (capEnemy) {
             const sym = PIECE_SYMBOLS[`black_${capEnemy.type}`] || '?';
             content = `<span class="piece capture-piece">${sym}</span>`;
@@ -1320,7 +1515,6 @@ function renderGame() {
   const boardType = board.type;
   const boardLabel = BOARD_LABELS[boardType] || boardType;
 
-  // Ability dots for HUD
   const abDots = [];
   if (gameState.player.abilities.yellow > 0) abDots.push(`<span class="ability-dot" style="background:hsl(50,80%,55%);box-shadow:0 0 4px hsl(50,80%,55%);" title="黄色×${gameState.player.abilities.yellow}"></span>`);
   if (gameState.player.abilities.blue > 0) abDots.push(`<span class="ability-dot" style="background:hsl(210,70%,55%);box-shadow:0 0 4px hsl(210,70%,55%);" title="蓝色×${gameState.player.abilities.blue}"></span>`);
@@ -1330,6 +1524,9 @@ function renderGame() {
 
   const turnLabel = gameState.turn === 'player' ? '你的回合' : '敌方回合';
   const turnColor = gameState.turn === 'player' ? 'hsl(75,80%,62%)' : 'hsl(0,65%,48%)';
+
+  const abilityProgress = gameState.abilityCount % 3;
+  const nextAbility = 3 - abilityProgress;
 
   return `
     <div>
@@ -1346,6 +1543,14 @@ function renderGame() {
         <div class="flex items-center gap-1 min-w-0" style="gap: 4px;">
           ${abDots.length > 0 ? abDots.join('') : '<span style="font-size:7px;color:hsl(75,20%,50%);">无能力</span>'}
         </div>
+      </div>
+      <!-- 能力进度条 -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:7px;color:hsl(75,20%,50%);">
+        <span>能力进度</span>
+        <div style="flex:1;height:4px;background:hsl(75,12%,20%);border-radius:2px;overflow:hidden;">
+          <div style="width:${(gameState.abilityCount % 3) / 3 * 100}%;height:100%;background:hsl(75,80%,62%);border-radius:2px;transition:width 0.3s;"></div>
+        </div>
+        <span>${nextAbility === 3 ? '0' : nextAbility}/3</span>
       </div>
 
       <!-- Board -->
@@ -1423,7 +1628,6 @@ function togglePause() {
 }
 
 function renderOverlays() {
-  // Remove existing overlays
   document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
 
   if (mapVisible) renderMapOverlay();
@@ -1436,7 +1640,7 @@ function renderMapOverlay() {
   overlay.className = 'map-overlay dynamic-overlay';
   overlay.innerHTML = `
     <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:10px;color:hsl(75,80%,62%);z-index:1;">
-      地牢地图 (Tab关闭)
+      地牢地图 (Tab关闭) · 已探索 ${gameState.visitedRooms.size}/13
     </div>
     <div class="map-container" id="map-container"></div>
   `;
@@ -1446,7 +1650,6 @@ function renderMapOverlay() {
     if (e.target === overlay) { toggleMap(); }
   });
 
-  // Draw map
   setTimeout(() => {
     const container = document.getElementById('map-container');
     if (!container) return;
@@ -1454,6 +1657,7 @@ function renderMapOverlay() {
   }, 50);
 }
 
+// 地图绘制：只显示已访问的房间
 function drawMap(container) {
   const gridPos = gameState.gridPos;
   if (!gridPos) return;
@@ -1462,7 +1666,6 @@ function drawMap(container) {
   const w = rect.width;
   const h = rect.height;
 
-  // Find grid bounds
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (let i = 0; i < 13; i++) {
     minX = Math.min(minX, gridPos[i].x);
@@ -1486,13 +1689,11 @@ function drawMap(container) {
     king: 'hsl(0,70%,48%)',
   };
 
-  // Build a lookup: grid key -> board index
   const gridMap = {};
   for (let i = 0; i < 13; i++) {
     gridMap[`${gridPos[i].x},${gridPos[i].y}`] = i;
   }
 
-  // Render grid cells
   for (let gy = minY; gy <= maxY; gy++) {
     for (let gx = minX; gx <= maxX; gx++) {
       const key = `${gx},${gy}`;
@@ -1500,13 +1701,12 @@ function drawMap(container) {
       const left = offsetX + (gx - minX) * cellSize;
       const top = offsetY + (gy - minY) * cellSize;
 
-      if (boardIdx !== undefined) {
+      if (boardIdx !== undefined && gameState.visitedRooms.has(boardIdx)) {
         const board = gameState.boards[boardIdx];
         const isCurrent = boardIdx === gameState.currentBoardIndex;
         const isKing = board.type === 'king';
         const isSpawn = board.type === 'spawn';
 
-        // Determine dot color: dim if item collected or king captured
         let dotColor = typeColors[board.type];
         let dotClass = 'map-dot';
         if (board.item && board.item.collected) {
@@ -1514,7 +1714,7 @@ function drawMap(container) {
           dotClass = 'map-dot map-dot-dim';
         }
         if (isKing) {
-          const kingAlive = board.enemies.some(e => e.type === 'king');
+          const kingAlive = board.enemies.some(e => e.type === 'king' && e.alive !== false);
           if (!kingAlive) {
             dotColor = 'hsl(0,0%,40%)';
             dotClass = 'map-dot map-dot-dim';
@@ -1535,16 +1735,8 @@ function drawMap(container) {
         cell.innerHTML = inner;
         cell.title = `${BOARD_LABELS[board.type]}`;
         container.appendChild(cell);
-      } else {
-        // Empty grid cell (no room)
-        const cell = document.createElement('div');
-        cell.className = 'map-empty';
-        cell.style.left = left + 'px';
-        cell.style.top = top + 'px';
-        cell.style.width = (cellSize - 6) + 'px';
-        cell.style.height = (cellSize - 6) + 'px';
-        container.appendChild(cell);
       }
+      // 未访问房间不绘制任何元素
     }
   }
 }
@@ -1566,11 +1758,16 @@ function renderAbilitiesOverlay() {
     { name: '紫色能力', key: 'purple', desc: '回合结束时随机吃掉左右相邻格内2回合内到达的敌子', value: ab.purple ? '已解锁 ✓' : '未解锁', color: 'hsl(280,60%,55%)' },
   ];
 
+  const nextAbility = 3 - (gameState.abilityCount % 3);
+
   overlay.innerHTML = `
     <div class="ability-panel">
-      <div style="font-size:10px;color:hsl(75,80%,62%);margin-bottom:12px;text-align:center;">已解锁能力 (Ctrl关闭)</div>
+      <div style="font-size:10px;color:hsl(75,80%,62%);margin-bottom:8px;text-align:center;">已解锁能力 (Ctrl关闭)</div>
+      <div style="font-size:8px;color:hsl(75,20%,50%);text-align:center;margin-bottom:10px;">
+        已获得 ${gameState.abilityCount} 个能力 · 再获得 ${nextAbility === 3 ? '0' : nextAbility} 个触发房间增强
+      </div>
       ${items.map(item => `
-        <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+        <div style="margin-bottom:6px;display:flex;align-items:center;gap:8px;">
           <span style="width:10px;height:10px;border-radius:50%;background:${item.color};flex-shrink:0;"></span>
           <div class="min-w-0 flex-1">
             <div style="color:${item.color};">${item.name}</div>
@@ -1617,7 +1814,6 @@ function quitToMenu() {
 // ============================================================
 
 function bindEvents() {
-  // Cell clicks
   document.querySelectorAll('.cell').forEach(cell => {
     cell.addEventListener('click', () => {
       if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
@@ -1627,7 +1823,6 @@ function bindEvents() {
     });
   });
 
-  // Buttons
   const btnMap = document.getElementById('btn-map');
   const btnAbilities = document.getElementById('btn-abilities');
   const btnMenu = document.getElementById('btn-menu');
@@ -1635,7 +1830,6 @@ function bindEvents() {
   if (btnAbilities) btnAbilities.addEventListener('click', toggleAbilities);
   if (btnMenu) btnMenu.addEventListener('click', togglePause);
 
-  // D-pad
   document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
     btn.addEventListener('click', () => {
       if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
@@ -1652,7 +1846,6 @@ function bindEvents() {
   });
 }
 
-// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   if (gameState.phase === 'menu') {
     if (e.key === 'Enter') { e.preventDefault(); initGame(); }
@@ -1714,78 +1907,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Fix: update switchBoard call in movePlayer to pass old board index
-// We need to monkey-patch movePlayer... Actually let me just fix the function.
-
-// Override movePlayer to fix portal transition
-const originalMovePlayer = movePlayer;
-movePlayer = function(toRow, toCol) {
-  if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
-
-  const isReachable = gameState.reachableCells.some(c => c.row === toRow && c.col === toCol);
-  if (!isReachable) return;
-
-  const board = gameState.boards[gameState.currentBoardIndex];
-  const oldBoardIndex = gameState.currentBoardIndex;
-
-  // Check for portal
-  const portal = board.portalCells.find(p => p.row === toRow && p.col === toCol);
-
-  // Check for enemy capture
-  const enemyIdx = board.enemies.findIndex(e => e.row === toRow && e.col === toCol);
-  let capturedKing = false;
-  if (enemyIdx !== -1) {
-    const enemy = board.enemies[enemyIdx];
-    if (enemy.type === 'king') capturedKing = true;
-    board.enemies.splice(enemyIdx, 1);
-  }
-
-  // Check for item pickup
-  let itemPicked = null;
-  if (board.item && !board.item.collected && board.item.row === toRow && board.item.col === toCol) {
-    board.item.collected = true;
-    itemPicked = board.item.type;
-    applyAbility(itemPicked);
-  }
-
-  // Move player
-  gameState.animatingPiece = { fromRow: gameState.player.row, fromCol: gameState.player.col, toRow, toCol, color: 'white' };
-  gameState.player.row = toRow;
-  gameState.player.col = toCol;
-
-  // Check purple ability
-  if (gameState.player.abilities.purple) {
-    triggerPurpleAbility(board);
-  }
-
-  // Portal transition
-  if (portal) {
-    gameState.slideDirection = 'out-' + portal.direction;
-    gameState._lastSlideDir = portal.direction;
-    gameState.turn = 'enemy';
-    render();
-    setTimeout(() => {
-      switchBoardWithOld(oldBoardIndex, portal.targetBoard);
-      setTimeout(() => {
-        if (capturedKing) {
-          winGame();
-          return;
-        }
-        endPlayerTurn();
-      }, 350);
-    }, 300);
-    return;
-  }
-
-  if (capturedKing) {
-    winGame();
-    return;
-  }
-
-  endPlayerTurn();
-};
-
-// Toast helper
 function showToast(msg, color) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -1796,20 +1917,6 @@ function showToast(msg, color) {
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 2000);
 }
-
-// Override applyAbility to show toast
-const originalApplyAbility = applyAbility;
-applyAbility = function(type) {
-  originalApplyAbility(type);
-  const colorMap = {
-    yellow: 'hsl(50,80%,55%)',
-    blue: 'hsl(210,70%,55%)',
-    green: 'hsl(140,60%,48%)',
-    orange: 'hsl(25,80%,55%)',
-    purple: 'hsl(280,60%,55%)',
-  };
-  showToast(`${ABILITY_NAMES[type]} 已解锁！`, colorMap[type]);
-};
 
 // ============================================================
 // INIT
