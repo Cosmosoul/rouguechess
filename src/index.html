@@ -77,8 +77,7 @@ body {
 /* Board */
 .board-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  grid-template-rows: repeat(5, 1fr);
+  /* grid-template-columns 和 rows 由 JS 动态设置 */
   aspect-ratio: 1;
   border: 3px solid hsl(75 18% 25%);
   border-radius: 2px;
@@ -90,7 +89,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(20px, 5vw, 32px);
+  font-size: clamp(16px, 4vw, 28px);
   cursor: pointer;
   position: relative;
   transition: background-color 0.1s;
@@ -387,7 +386,7 @@ body {
 ::-webkit-scrollbar { display: none; }
 
 @media (max-width: 400px) {
-  .cell { font-size: 18px; }
+  .cell { font-size: 14px; }
   .hud { font-size: 7px; }
   .btn { font-size: 8px; padding: 8px 14px; }
 }
@@ -398,7 +397,7 @@ body {
 
 <script>
 // ============================================================
-// ROGUE CHESS - 肉鸽国际象棋
+// ROGUE CHESS - 肉鸽国际象棋 (动态棋盘尺寸)
 // ============================================================
 
 const PIECE_SYMBOLS = {
@@ -427,7 +426,10 @@ const ABILITY_NAMES = {
   purple: '吃过路兵',
 };
 
-const BOARD_TYPES = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'green', 'orange', 'purple', 'king'];
+// 棋盘类型（数量随尺寸变化）
+const BOARD_TYPES_5 = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'green', 'orange', 'purple', 'king'];
+const BOARD_TYPES_8 = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'blue', 'green', 'orange', 'purple', 'king', 'king']; // 示例，实际可调整
+
 const BOARD_LABELS = {
   spawn:  '出生点',
   yellow: '黄色能力',
@@ -443,16 +445,16 @@ const BOARD_LABELS = {
 // ============================================================
 
 let gameState = {
-  phase: 'menu', // menu | playing | paused | over
-  result: null,  // 'win' | 'lose' | null
+  phase: 'menu',
+  result: null,
   boards: [],
   connections: [],
   gridPos: [],
   currentBoardIndex: 0,
   player: {
     boardIndex: 0,
-    row: 2,
-    col: 2,
+    row: 0,
+    col: 0,
     abilities: { yellow: 0, blue: 0, green: false, orange: false, purple: false },
   },
   turn: 'player',
@@ -463,30 +465,41 @@ let gameState = {
   justEnteredRoom: false,
   animatingPiece: null,
   difficulty: 'normal',
-  wins: 0,            // 胜场数
-  highScore: 0,       // 最高通关分数
-  score: 0,           // 当前得分
+  wins: 0,
+  highScore: 0,
+  score: 0,
   abilityCount: 0,
   visitedRooms: new Set(),
+  boardSize: 5,   // 当前棋盘尺寸
 };
 
 // ============================================================
-// UTILITY
+// UTILITY (动态尺寸)
 // ============================================================
 
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function shuffle(arr) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = randInt(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
-function inBounds(r, c) { return r >= 0 && r < 5 && c >= 0 && c < 5; }
+function inBounds(r, c, size) { return r >= 0 && r < size && c >= 0 && c < size; }
 
 // ============================================================
-// DUNGEON GENERATION
+// DUNGEON GENERATION (动态尺寸)
 // ============================================================
 
 function generateDungeon(difficulty) {
+  const size = (difficulty === 'hard') ? 8 : 5;
+  const roomCount = (size === 5) ? 13 : 20; // 8x8 更多房间
+  const boardTypes = (size === 5) ? BOARD_TYPES_5 : BOARD_TYPES_8;
+  // 确保有足够的类型，若不够则重复
+  let types = [];
+  while (types.length < roomCount) {
+    types = types.concat(boardTypes);
+  }
+  types = types.slice(0, roomCount);
+
+  // 生成网格坐标 (类似原算法，但适应更多房间)
   const gridPos = [];
   const occupied = new Set();
-
   gridPos[0] = { x: 0, y: 0 };
   occupied.add('0,0');
 
@@ -504,7 +517,7 @@ function generateDungeon(difficulty) {
   }
   addFrontier(0, 0);
 
-  for (let i = 1; i < 13; i++) {
+  for (let i = 1; i < roomCount; i++) {
     frontier.sort((a, b) => {
       const distA = Math.abs(a.x) + Math.abs(a.y);
       const distB = Math.abs(b.x) + Math.abs(b.y);
@@ -519,8 +532,9 @@ function generateDungeon(difficulty) {
     addFrontier(cell.x, cell.y);
   }
 
+  // 居中
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < roomCount; i++) {
     minX = Math.min(minX, gridPos[i].x);
     minY = Math.min(minY, gridPos[i].y);
     maxX = Math.max(maxX, gridPos[i].x);
@@ -528,14 +542,15 @@ function generateDungeon(difficulty) {
   }
   const cx = Math.round((minX + maxX) / 2);
   const cy = Math.round((minY + maxY) / 2);
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < roomCount; i++) {
     gridPos[i].x -= cx;
     gridPos[i].y -= cy;
   }
 
+  // 连接
   const connections = [];
-  for (let i = 0; i < 13; i++) {
-    for (let j = i + 1; j < 13; j++) {
+  for (let i = 0; i < roomCount; i++) {
+    for (let j = i + 1; j < roomCount; j++) {
       const dx = gridPos[j].x - gridPos[i].x;
       const dy = gridPos[j].y - gridPos[i].y;
       if (Math.abs(dx) + Math.abs(dy) !== 1) continue;
@@ -544,45 +559,48 @@ function generateDungeon(difficulty) {
       else if (dy === 1) { edgeA = 2; edgeB = 0; }
       else if (dx === -1) { edgeA = 3; edgeB = 1; }
       else { edgeA = 1; edgeB = 3; }
-      const col = randInt(1, 3);
+      const col = randInt(1, size - 2); // 传送门列/行位置
       connections.push({ a: i, edgeA, b: j, edgeB, col });
     }
   }
 
-  const types = shuffle([...BOARD_TYPES]);
-  const spawnIdx = types.indexOf('spawn');
-  if (spawnIdx !== 0) { [types[0], types[spawnIdx]] = [types[spawnIdx], types[0]]; }
+  // 分配类型，确保 spawn 在索引0
+  const shuffledTypes = shuffle(types);
+  const spawnIdx = shuffledTypes.indexOf('spawn');
+  if (spawnIdx !== 0) { [shuffledTypes[0], shuffledTypes[spawnIdx]] = [shuffledTypes[spawnIdx], shuffledTypes[0]]; }
 
-  const kingIdx = types.indexOf('king');
+  // 将 king 放在较远位置
+  const kingIdx = shuffledTypes.indexOf('king');
+  // 简单处理：如果 king 离 spawn 太近，交换
   const kingDist = Math.abs(gridPos[kingIdx].x - gridPos[0].x) + Math.abs(gridPos[kingIdx].y - gridPos[0].y);
   if (kingDist < 2) {
     const candidates = [];
-    for (let i = 1; i < 13; i++) {
+    for (let i = 1; i < roomCount; i++) {
       if (i === kingIdx) continue;
       const d = Math.abs(gridPos[i].x - gridPos[0].x) + Math.abs(gridPos[i].y - gridPos[0].y);
       if (d >= 2) candidates.push(i);
     }
     if (candidates.length > 0) {
       const swap = pick(candidates);
-      [types[kingIdx], types[swap]] = [types[swap], types[kingIdx]];
+      [shuffledTypes[kingIdx], shuffledTypes[swap]] = [shuffledTypes[swap], shuffledTypes[kingIdx]];
     }
   }
 
   const boards = [];
-  for (let i = 0; i < 13; i++) {
-    boards.push(generateBoard(i, types[i], connections, difficulty, i === 0));
+  for (let i = 0; i < roomCount; i++) {
+    boards.push(generateBoard(i, shuffledTypes[i], connections, difficulty, size, i === 0));
   }
 
-  return { boards, connections, types, gridPos };
+  return { boards, connections, types: shuffledTypes, gridPos, size };
 }
 
-function getPortalPos(edge, col) {
+function getPortalPos(edge, col, size) {
   switch (edge) {
     case 0: return { row: 0, col };
-    case 2: return { row: 4, col };
+    case 2: return { row: size - 1, col };
     case 3: return { row: col, col: 0 };
-    case 1: return { row: col, col: 4 };
-    default: return { row: 2, col: 2 };
+    case 1: return { row: col, col: size - 1 };
+    default: return { row: Math.floor(size/2), col: Math.floor(size/2) };
   }
 }
 
@@ -591,14 +609,14 @@ function edgeToDir(edge) {
   return map[edge] || 'up';
 }
 
-function isPortalSafe(portalCells, enemies) {
+function isPortalSafe(portalCells, enemies, size) {
   for (const p of portalCells) {
     if (enemies.some(e => e.row === p.row && e.col === p.col)) return false;
     for (let dr = -1; dr <= 1; dr++) {
       for (let dc = -1; dc <= 1; dc++) {
         if (dr === 0 && dc === 0) continue;
         const nr = p.row + dr, nc = p.col + dc;
-        if (nr < 0 || nr > 4 || nc < 0 || nc > 4) continue;
+        if (!inBounds(nr, nc, size)) continue;
         if (enemies.some(e => e.row === nr && e.col === nc)) return false;
       }
     }
@@ -606,7 +624,7 @@ function isPortalSafe(portalCells, enemies) {
   return true;
 }
 
-function generateBoard(index, type, allConnections, difficulty, isSpawn) {
+function generateBoard(index, type, allConnections, difficulty, size, isSpawn) {
   const myConns = allConnections.filter(c => c.a === index || c.b === index);
 
   const portalCells = [];
@@ -616,7 +634,7 @@ function generateBoard(index, type, allConnections, difficulty, isSpawn) {
     const isA = conn.a === index;
     const edge = isA ? conn.edgeA : conn.edgeB;
     const targetBoard = isA ? conn.b : conn.a;
-    const pos = getPortalPos(edge, conn.col);
+    const pos = getPortalPos(edge, conn.col, size);
     const dir = edgeToDir(edge);
 
     const key = `${pos.row},${pos.col}`;
@@ -629,7 +647,7 @@ function generateBoard(index, type, allConnections, difficulty, isSpawn) {
   const diffConfig = {
     easy:   [2, 1],
     normal: [2, 1],
-    hard:   [2, 2],
+    hard:   [3, 2], // 困难模式增加敌人数量
   };
   const [pawnCount, advancedCount] = diffConfig[difficulty] || diffConfig.normal;
 
@@ -637,13 +655,14 @@ function generateBoard(index, type, allConnections, difficulty, isSpawn) {
   let attempts = 0;
   let spawnSafe = false;
 
+  const center = Math.floor(size / 2);
   do {
     enemies = [];
     const occupied = new Set(portalCells.map(p => `${p.row},${p.col}`));
-    if (type === 'spawn') occupied.add('2,2');
+    if (type === 'spawn') occupied.add(`${center},${center}`);
 
     for (let i = 0; i < pawnCount; i++) {
-      const pos = randomEmptyCell(occupied);
+      const pos = randomEmptyCell(occupied, size);
       occupied.add(`${pos.row},${pos.col}`);
       enemies.push({ type: 'pawn', color: 'black', row: pos.row, col: pos.col, lastMoveTurn: -999, alive: true, respawnable: true });
     }
@@ -651,34 +670,33 @@ function generateBoard(index, type, allConnections, difficulty, isSpawn) {
     const advancedTypes = ['bishop', 'queen', 'rook', 'knight'];
     for (let i = 0; i < advancedCount; i++) {
       const chosen = advancedTypes[i % advancedTypes.length];
-      const apos = randomEmptyCell(occupied);
+      const apos = randomEmptyCell(occupied, size);
       occupied.add(`${apos.row},${apos.col}`);
       enemies.push({ type: chosen, color: 'black', row: apos.row, col: apos.col, lastMoveTurn: -999, alive: true, respawnable: false });
     }
 
     if (type === 'king') {
-      const kpos = randomEmptyCell(occupied);
+      const kpos = randomEmptyCell(occupied, size);
       occupied.add(`${kpos.row},${kpos.col}`);
       enemies.push({ type: 'king', color: 'black', row: kpos.row, col: kpos.col, lastMoveTurn: -999, alive: true, respawnable: false });
-      const qpos = randomEmptyCell(occupied);
+      const qpos = randomEmptyCell(occupied, size);
       occupied.add(`${qpos.row},${qpos.col}`);
       enemies.push({ type: 'queen', color: 'black', row: qpos.row, col: qpos.col, lastMoveTurn: -999, alive: true, respawnable: false });
     }
 
     attempts++;
-
     if (isSpawn) {
-      spawnSafe = checkSpawnSafety(enemies);
+      spawnSafe = checkSpawnSafety(enemies, size);
     } else {
       spawnSafe = true;
     }
-  } while ((!isPortalSafe(portalCells, enemies) || !spawnSafe) && attempts < 200);
+  } while ((!isPortalSafe(portalCells, enemies, size) || !spawnSafe) && attempts < 200);
 
   let item = null;
   if (type !== 'spawn' && type !== 'king') {
     const occupied = new Set(portalCells.map(p => `${p.row},${p.col}`));
     enemies.forEach(e => occupied.add(`${e.row},${e.col}`));
-    const itemPos = randomEmptyCell(occupied);
+    const itemPos = randomEmptyCell(occupied, size);
     if (itemPos) {
       item = { type, row: itemPos.row, col: itemPos.col, collected: false };
     }
@@ -686,31 +704,28 @@ function generateBoard(index, type, allConnections, difficulty, isSpawn) {
 
   const initialEnemies = enemies.map(e => ({ ...e }));
 
-  return { index, type, portalCells, enemies, item, initialEnemies };
+  return { index, type, portalCells, enemies, item, initialEnemies, size };
 }
 
-// ============================================================
-// 安全校验函数 (仅用于生成时)
-// ============================================================
-
-function checkSpawnSafety(enemies) {
-  const spawnRow = 2, spawnCol = 2;
+function checkSpawnSafety(enemies, size) {
+  const center = Math.floor(size / 2);
+  const spawnRow = center, spawnCol = center;
   const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   for (const [dr, dc] of dirs) {
     const nr = spawnRow + dr, nc = spawnCol + dc;
-    if (!inBounds(nr, nc)) continue;
+    if (!inBounds(nr, nc, size)) continue;
     if (enemies.some(e => e.row === nr && e.col === nc)) continue;
-    if (!isCellAttackedByEnemy({ enemies }, nr, nc)) {
+    if (!isCellAttackedByEnemy({ enemies }, nr, nc, size)) {
       return true;
     }
   }
   return false;
 }
 
-function isCellAttackedByEnemy(board, row, col) {
+function isCellAttackedByEnemy(board, row, col, size) {
   for (const enemy of board.enemies) {
     if (enemy.alive === false) continue;
-    const moves = getEnemyMoves(board, enemy, row, col);
+    const moves = getEnemyMoves(board, enemy, row, col, size);
     if (moves.some(m => m.row === row && m.col === col)) {
       return true;
     }
@@ -718,15 +733,29 @@ function isCellAttackedByEnemy(board, row, col) {
   return false;
 }
 
+function randomEmptyCell(occupied, size) {
+  const candidates = [];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (!occupied.has(`${r},${c}`)) candidates.push({ row: r, col: c });
+    }
+  }
+  if (candidates.length === 0) {
+    const center = Math.floor(size/2);
+    return { row: center, col: center };
+  }
+  return pick(candidates);
+}
+
 // ============================================================
-// MOVE GENERATION
+// MOVE GENERATION (动态尺寸)
 // ============================================================
 
 function getEnemyAt(board, row, col) {
   return board.enemies.find(e => e.alive !== false && e.row === row && e.col === col) || null;
 }
 
-function getEnemyMoves(board, enemy, playerRow, playerCol) {
+function getEnemyMoves(board, enemy, playerRow, playerCol, size) {
   const moves = [];
   const { type, row, col } = enemy;
 
@@ -736,12 +765,12 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
     return allEnemies.some(e => e !== enemy && e.alive !== false && e.row === r && e.col === c);
   }
 
-  function addLineMoves(dirs, maxSteps = 5) {
+  function addLineMoves(dirs, maxSteps = size) {
     for (const [dr, dc] of dirs) {
       for (let step = 1; step <= maxSteps; step++) {
         const nr = row + dr * step;
         const nc = col + dc * step;
-        if (!inBounds(nr, nc)) break;
+        if (!inBounds(nr, nc, size)) break;
         if (isBlocked(nr, nc)) break;
         moves.push({ row: nr, col: nc });
         if (nr === playerRow && nc === playerCol) break;
@@ -755,13 +784,13 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
       const capDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
       for (const [dr, dc] of moveDirs) {
         const nr = row + dr, nc = col + dc;
-        if (inBounds(nr, nc) && !isBlocked(nr, nc) && !(nr === playerRow && nc === playerCol)) {
+        if (inBounds(nr, nc, size) && !isBlocked(nr, nc) && !(nr === playerRow && nc === playerCol)) {
           moves.push({ row: nr, col: nc });
         }
       }
       for (const [dr, dc] of capDirs) {
         const nr = row + dr, nc = col + dc;
-        if (inBounds(nr, nc) && (nr === playerRow && nc === playerCol)) {
+        if (inBounds(nr, nc, size) && (nr === playerRow && nc === playerCol)) {
           moves.push({ row: nr, col: nc });
         }
       }
@@ -780,7 +809,7 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
       const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
       for (const [dr, dc] of knightMoves) {
         const nr = row + dr, nc = col + dc;
-        if (inBounds(nr, nc) && !isBlocked(nr, nc)) {
+        if (inBounds(nr, nc, size) && !isBlocked(nr, nc)) {
           moves.push({ row: nr, col: nc });
         }
       }
@@ -790,7 +819,7 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
       const kingDirs = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
       for (const [dr, dc] of kingDirs) {
         const nr = row + dr, nc = col + dc;
-        if (inBounds(nr, nc) && !isBlocked(nr, nc)) {
+        if (inBounds(nr, nc, size) && !isBlocked(nr, nc)) {
           moves.push({ row: nr, col: nc });
         }
       }
@@ -801,23 +830,13 @@ function getEnemyMoves(board, enemy, playerRow, playerCol) {
   return moves;
 }
 
-function randomEmptyCell(occupied) {
-  const candidates = [];
-  for (let r = 0; r < 5; r++) {
-    for (let c = 0; c < 5; c++) {
-      if (!occupied.has(`${r},${c}`)) candidates.push({ row: r, col: c });
-    }
-  }
-  if (candidates.length === 0) return { row: 2, col: 2 };
-  return pick(candidates);
-}
-
 // ============================================================
-// PLAYER MOVES
+// PLAYER MOVES (动态尺寸)
 // ============================================================
 
 function getPlayerMoves(state) {
   const board = state.boards[state.currentBoardIndex];
+  const size = board.size;
   const { row, col, abilities } = state.player;
   const maxOrtho = 1 + abilities.yellow;
   const maxDiag = abilities.green ? (1 + abilities.blue) : 0;
@@ -836,7 +855,7 @@ function getPlayerMoves(state) {
     for (let step = 1; step <= maxOrtho; step++) {
       const nr = row + dr * step;
       const nc = col + dc * step;
-      if (!inBounds(nr, nc)) break;
+      if (!inBounds(nr, nc, size)) break;
       const cellOccupant = getEnemyAt(board, nr, nc);
       if (cellOccupant) {
         reachable.push({ row: nr, col: nc });
@@ -855,7 +874,7 @@ function getPlayerMoves(state) {
     for (let step = 1; step <= maxDiag; step++) {
       const nr = row + dr * step;
       const nc = col + dc * step;
-      if (!inBounds(nr, nc)) break;
+      if (!inBounds(nr, nc, size)) break;
       const cellOccupant = getEnemyAt(board, nr, nc);
       if (cellOccupant) {
         reachable.push({ row: nr, col: nc });
@@ -879,11 +898,12 @@ function getPlayerMoves(state) {
 }
 
 // ============================================================
-// AI (含第一回合保护)
+// AI (动态尺寸)
 // ============================================================
 
 function aiMove(state) {
   const board = state.boards[state.currentBoardIndex];
+  const size = board.size;
   const { row: pr, col: pc } = state.player;
   const allMoves = [];
 
@@ -893,16 +913,12 @@ function aiMove(state) {
 
   for (const enemy of board.enemies) {
     if (enemy.alive === false) continue;
-    const moves = getEnemyMoves(board, enemy, pr, pc);
+    const moves = getEnemyMoves(board, enemy, pr, pc, size);
     for (const move of moves) {
       let score = 0;
 
-      // 最高优先级：直接吃掉玩家
       if (move.row === pr && move.col === pc) {
-        // 如果玩家刚进入房间，禁止AI吃掉玩家
-        if (state.justEnteredRoom) {
-          continue; // 跳过这个移动
-        }
+        if (state.justEnteredRoom) continue;
         score = 1000000;
       } else {
         if (kingAlive) {
@@ -977,6 +993,8 @@ function getScoreForEnemyType(type) {
 function initGame(difficulty) {
   const d = difficulty || gameState.difficulty || 'normal';
   const dungeon = generateDungeon(d);
+  const size = dungeon.size;
+  const center = Math.floor(size / 2);
   gameState = {
     phase: 'playing',
     result: null,
@@ -987,8 +1005,8 @@ function initGame(difficulty) {
     currentBoardIndex: 0,
     player: {
       boardIndex: 0,
-      row: 2,
-      col: 2,
+      row: center,
+      col: center,
       abilities: { yellow: 0, blue: 0, green: false, orange: false, purple: false },
     },
     turn: 'player',
@@ -1003,12 +1021,11 @@ function initGame(difficulty) {
     score: 0,
     abilityCount: 0,
     visitedRooms: new Set(),
+    boardSize: size,
   };
   gameState.visitedRooms.add(0);
-  gameState.player.row = 2;
-  gameState.player.col = 2;
   gameState.reachableCells = getPlayerMoves(gameState);
-  loadStats(); // 加载 wins 和 highScore
+  loadStats();
   render();
 }
 
@@ -1054,7 +1071,7 @@ function applyAbility(type) {
 
 function enhanceUnvisitedRooms() {
   const unvisited = [];
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < gameState.boards.length; i++) {
     if (!gameState.visitedRooms.has(i)) {
       unvisited.push(i);
     }
@@ -1067,6 +1084,7 @@ function enhanceUnvisitedRooms() {
   for (const idx of unvisited) {
     const board = gameState.boards[idx];
     if (!board) continue;
+    const size = board.size;
     const isAdvanced = Math.random() < 0.5;
     const types = isAdvanced ? ['bishop', 'queen', 'rook', 'knight'] : ['pawn'];
     const type = pick(types);
@@ -1074,7 +1092,7 @@ function enhanceUnvisitedRooms() {
     board.enemies.forEach(e => occupied.add(`${e.row},${e.col}`));
     board.portalCells.forEach(p => occupied.add(`${p.row},${p.col}`));
     if (board.item && !board.item.collected) occupied.add(`${board.item.row},${board.item.col}`);
-    const pos = randomEmptyCell(occupied);
+    const pos = randomEmptyCell(occupied, size);
     if (pos) {
       const respawnable = type === 'pawn';
       board.enemies.push({
@@ -1124,8 +1142,9 @@ function switchBoardWithOld(oldBoardIndex, targetIndex) {
       targetRow = anyPortal.row;
       targetCol = anyPortal.col;
     } else {
-      targetRow = 2;
-      targetCol = 2;
+      const center = Math.floor(newBoard.size / 2);
+      targetRow = center;
+      targetCol = center;
     }
   }
 
@@ -1153,6 +1172,7 @@ function switchBoardWithOld(oldBoardIndex, targetIndex) {
 function respawnPawns(boardIndex) {
   const board = gameState.boards[boardIndex];
   if (!board) return;
+  const size = board.size;
 
   const aliveEnemies = board.enemies.filter(e => e.alive !== false);
   const initialPawns = board.initialEnemies.filter(e => e.type === 'pawn');
@@ -1167,7 +1187,7 @@ function respawnPawns(boardIndex) {
   if (board.item && !board.item.collected) occupied.add(`${board.item.row},${board.item.col}`);
 
   for (let i = 0; i < missingCount; i++) {
-    const pos = randomEmptyCell(occupied);
+    const pos = randomEmptyCell(occupied, size);
     if (pos) {
       const newPawn = {
         type: 'pawn',
@@ -1200,9 +1220,7 @@ function movePlayer(toRow, toCol) {
   if (enemyTarget) {
     if (enemyTarget.type === 'king') {
       capturedKing = true;
-      // 国王不给分
     } else {
-      // 加分
       const pts = getScoreForEnemyType(enemyTarget.type);
       gameState.score += pts;
       showToast(`+${pts} 分`, 'hsl(75,80%,62%)');
@@ -1256,7 +1274,7 @@ function triggerPurpleAbility(board) {
   const candidates = [];
   const checkPositions = [[row, col - 1], [row, col + 1]];
   for (const [r, c] of checkPositions) {
-    if (!inBounds(r, c)) continue;
+    if (!inBounds(r, c, board.size)) continue;
     const enemy = getEnemyAt(board, r, c);
     if (enemy && enemy.lastMoveTurn >= gameState.turnNumber - 1) {
       candidates.push(enemy);
@@ -1265,7 +1283,6 @@ function triggerPurpleAbility(board) {
   if (candidates.length > 0) {
     const target = pick(candidates);
     if (target) {
-      // 紫色能力吃掉敌人也加分
       const pts = getScoreForEnemyType(target.type);
       gameState.score += pts;
       showToast(`+${pts} 分 (紫)`, 'hsl(280,60%,55%)');
@@ -1316,7 +1333,6 @@ function winGame() {
   gameState.phase = 'over';
   gameState.result = 'win';
   gameState.wins++;
-  // 更新最高分
   if (gameState.score > gameState.highScore) {
     gameState.highScore = gameState.score;
   }
@@ -1327,23 +1343,12 @@ function winGame() {
 function loseGame() {
   gameState.phase = 'over';
   gameState.result = 'lose';
-  // 失败不更新最高分，但胜场不计
-  // 但我们已经增加 wins 只在 win 时增加，所以 lose 不处理
   saveStats();
   render();
 }
 
 function restartGame() {
   initGame(gameState.difficulty);
-}
-
-function loadBestScore() {
-  // 兼容旧版本，但我们现在用 loadStats
-  loadStats();
-}
-
-function saveBestScore() {
-  saveStats();
 }
 
 // ============================================================
@@ -1370,9 +1375,9 @@ function renderMenu() {
   return `
     <div class="text-center" style="padding-top: 6vh; max-height: 100vh; overflow-y: auto;">
       <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
-      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">Rogue Chess</h1>
+      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">肉鸽国际象棋</h1>
       <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 16px; line-height: 2;">
-        探索13个棋盘房间 · 收集能力 · 击败国王
+        探索${gameState.boardSize === 8 ? '20' : '13'}个棋盘房间 · 收集能力 · 击败国王
       </p>
 
       <div style="background: hsl(75 12% 16%); border: 2px solid hsl(75 15% 22%); border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; text-align: left; max-height: 260px; overflow-y: auto;">
@@ -1385,22 +1390,22 @@ function renderMenu() {
           <div style="color: hsl(75 20% 50%);">  - 蓝色：斜向步数+1（需绿色解锁）</div>
           <div style="color: hsl(75 20% 50%);">  - 绿色：解锁斜向移动</div>
           <div style="color: hsl(75 20% 50%);">  - 橙色：可跳过1个阻挡棋子</div>
-          <div style="color: hsl(75 20% 50%);">  - 紫色：可吃掉2回合内刚到达的左右相邻的敌子</div>
+          <div style="color: hsl(75 20% 50%);">  - 紫色：回合结束吃掉左右相邻的敌子</div>
           <div>• 每获得 <span style="color:hsl(75,80%,62%);">3个能力</span>，尚未到达的房间将新增敌人</div>
-          <div>• <span style="color:hsl(0,65%,48%);">将领</span> 死亡后本局不重生，<span style="color:hsl(140,60%,48%);">士兵</span> 在普通/困难模式下离房回归后重生</div>
+          <div>• <span style="color:hsl(0,65%,48%);">将领</span> 永久死亡不重生，<span style="color:hsl(140,60%,48%);">士兵</span> 在普通/困难模式下离房回归后重生</div>
           <div>• 地图仅显示已访问的房间</div>
           <div style="color: hsl(75 20% 50%);">• 快捷键：Tab地图 | Ctrl能力 | Esc菜单 | 方向键/WASD移动</div>
         </div>
       </div>
 
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;">
-        <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单</button>
-        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">普通（推荐）</button>
-        <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难</button>
+        <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单 — 每房 2兵+1将 (5×5)</button>
+        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">普通 — 每房 2兵+1将 (5×5)</button>
+        <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难 — 每房 3兵+2将 (8×8)</button>
       </div>
 
       <p style="font-size: 8px; color: hsl(75 20% 50%); margin-top: 6px; line-height: 2;">
-        最高通关分数: <span style="color:hsl(75,80%,62%);">${gameState.highScore}</span> 
+        最高通关分数: <span style="color:hsl(75,80%,62%);">${gameState.highScore}</span> &nbsp;|&nbsp; 胜场: ${gameState.wins}
       </p>
       <div style="margin-top: 16px; font-size: 7px; color: hsl(75 15% 35%); line-height: 2;">
         Tab 地图 | Ctrl 能力 | Esc 菜单<br>
@@ -1420,7 +1425,7 @@ function renderGameOver() {
         </h2>
         <p style="font-size: 10px; line-height: 2;">
           ${isWin ? '你击败了黑色国王！' : '你被敌方棋子吃掉了...'}<br>
-          本局得分: ${gameState.score} 
+          本局得分: ${gameState.score} &nbsp;|&nbsp; 胜场: ${gameState.wins}
         </p>
         <button class="btn primary" onclick="restartGame()" style="margin-right: 8px;">再来一局</button>
         <button class="btn" onclick="showMenu()">返回菜单</button>
@@ -1437,6 +1442,7 @@ function showMenu() {
 
 function renderGame() {
   const board = gameState.boards[gameState.currentBoardIndex];
+  const size = board.size;
   const { row: pr, col: pc } = gameState.player;
   let slideClass = 'slide-reset';
   if (gameState.slideDirection) {
@@ -1448,8 +1454,8 @@ function renderGame() {
   }
 
   let cellsHTML = '';
-  for (let r = 0; r < 5; r++) {
-    for (let c = 0; c < 5; c++) {
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
       const isLight = (r + c) % 2 === 0;
       const isPortal = board.portalCells.some(p => p.row === r && p.col === c);
       const isReachable = gameState.reachableCells.some(rc => rc.row === r && rc.col === c);
@@ -1526,8 +1532,10 @@ function renderGame() {
   const abilityProgress = gameState.abilityCount % 3;
   const nextAbility = 3 - abilityProgress;
 
-  // 显示当前得分
   const scoreDisplay = `得分: ${gameState.score}`;
+
+  // 动态设置grid样式
+  const gridStyle = `grid-template-columns: repeat(${size}, 1fr); grid-template-rows: repeat(${size}, 1fr);`;
 
   return `
     <div>
@@ -1535,7 +1543,7 @@ function renderGame() {
       <div class="hud flex items-center justify-between mb-2 px-1" style="gap: 8px;">
         <div class="min-w-0 flex-1">
           <div style="color: hsl(75 80% 62%);">${boardLabel}</div>
-          <div style="font-size: 7px; color: hsl(75 20% 50%);">房间 ${gameState.currentBoardIndex + 1}/13</div>
+          <div style="font-size: 7px; color: hsl(75 20% 50%);">房间 ${gameState.currentBoardIndex + 1}/${gameState.boards.length}</div>
         </div>
         <div class="text-center min-w-0">
           <div style="color: ${turnColor};">${turnLabel}</div>
@@ -1557,7 +1565,7 @@ function renderGame() {
 
       <!-- Board -->
       <div class="board-wrapper">
-        <div class="board-grid board-slide ${slideClass}" id="board-grid">
+        <div class="board-grid board-slide ${slideClass}" id="board-grid" style="${gridStyle}">
           ${cellsHTML}
         </div>
       </div>
@@ -1642,7 +1650,7 @@ function renderMapOverlay() {
   overlay.className = 'map-overlay dynamic-overlay';
   overlay.innerHTML = `
     <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:10px;color:hsl(75,80%,62%);z-index:1;">
-      地牢地图 (Tab关闭) · 已探索 ${gameState.visitedRooms.size}/13
+      地牢地图 (Tab关闭) · 已探索 ${gameState.visitedRooms.size}/${gameState.boards.length}
     </div>
     <div class="map-container" id="map-container"></div>
   `;
@@ -1668,7 +1676,7 @@ function drawMap(container) {
   const h = rect.height;
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < gridPos.length; i++) {
     minX = Math.min(minX, gridPos[i].x);
     minY = Math.min(minY, gridPos[i].y);
     maxX = Math.max(maxX, gridPos[i].x);
@@ -1691,7 +1699,7 @@ function drawMap(container) {
   };
 
   const gridMap = {};
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < gridPos.length; i++) {
     gridMap[`${gridPos[i].x},${gridPos[i].y}`] = i;
   }
 
@@ -1736,6 +1744,9 @@ function drawMap(container) {
         cell.innerHTML = inner;
         cell.title = `${BOARD_LABELS[board.type]}`;
         container.appendChild(cell);
+      } else if (boardIdx !== undefined) {
+        // 未访问的房间：显示为灰色问号或留空？这里留空以保持迷雾效果
+        // 但为了体现网格，可以显示空白格，但为了迷雾感，我们什么都不显示
       }
     }
   }
@@ -1839,7 +1850,8 @@ function bindEvents() {
       const [dr, dc] = dirMap[dir];
       const nr = gameState.player.row + dr;
       const nc = gameState.player.col + dc;
-      if (inBounds(nr, nc)) {
+      const board = gameState.boards[gameState.currentBoardIndex];
+      if (inBounds(nr, nc, board.size)) {
         const isReachable = gameState.reachableCells.some(c => c.row === nr && c.col === nc);
         if (isReachable) movePlayer(nr, nc);
       }
@@ -1901,7 +1913,8 @@ document.addEventListener('keydown', (e) => {
     const [dr, dc] = delta;
     const nr = gameState.player.row + dr;
     const nc = gameState.player.col + dc;
-    if (inBounds(nr, nc)) {
+    const board = gameState.boards[gameState.currentBoardIndex];
+    if (inBounds(nr, nc, board.size)) {
       const isReachable = gameState.reachableCells.some(c => c.row === nr && c.col === nc);
       if (isReachable) movePlayer(nr, nc);
     }
