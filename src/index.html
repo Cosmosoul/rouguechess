@@ -1375,7 +1375,7 @@ function renderMenu() {
   return `
     <div class="text-center" style="padding-top: 6vh; max-height: 100vh; overflow-y: auto;">
       <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
-      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">肉鸽国际象棋</h1>
+      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">ROGUE CHESS</h1>
       <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 16px; line-height: 2;">
         探索${gameState.boardSize === 8 ? '20' : '13'}个棋盘房间 · 收集能力 · 击败国王
       </p>
@@ -1399,9 +1399,9 @@ function renderMenu() {
       </div>
 
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;">
-        <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单 — 每房 2兵+1将 (5×5)</button>
-        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">普通 — 每房 2兵+1将 (5×5)</button>
-        <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难 — 每房 3兵+2将 (8×8)</button>
+        <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单</button>
+        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">标准(推荐)</button>
+        <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难</button>
       </div>
 
       <p style="font-size: 8px; color: hsl(75 20% 50%); margin-top: 6px; line-height: 2;">
@@ -1745,8 +1745,6 @@ function drawMap(container) {
         cell.title = `${BOARD_LABELS[board.type]}`;
         container.appendChild(cell);
       } else if (boardIdx !== undefined) {
-        // 未访问的房间：显示为灰色问号或留空？这里留空以保持迷雾效果
-        // 但为了体现网格，可以显示空白格，但为了迷雾感，我们什么都不显示
       }
     }
   }
