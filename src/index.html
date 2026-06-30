@@ -77,7 +77,6 @@ body {
 /* Board */
 .board-grid {
   display: grid;
-  /* grid-template-columns 和 rows 由 JS 动态设置 */
   aspect-ratio: 1;
   border: 3px solid hsl(75 18% 25%);
   border-radius: 2px;
@@ -114,12 +113,15 @@ body {
 .cell.player-pos { box-shadow: inset 0 0 0 3px hsl(75 80% 62%); }
 .cell:hover { filter: brightness(1.15); }
 
+/* 棋子字号由 JS 动态控制，此处设置默认值 */
 .piece {
   line-height: 1;
   pointer-events: none;
   text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
   z-index: 1;
   position: relative;
+  font-size: clamp(24px, 6vw, 42px);
+  transition: font-size 0.1s;
 }
 
 .capture-piece {
@@ -218,12 +220,16 @@ body {
   padding: 24px;
   max-width: 380px;
   width: 90%;
-  text-align: center;
+  text-align: left;
   animation: scaleIn 0.2s;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
-.modal-box h2 { font-size: 14px; margin-bottom: 16px; }
+.modal-box h2 { font-size: 14px; margin-bottom: 16px; text-align: center; }
 .modal-box p  { font-size: 10px; margin-bottom: 12px; line-height: 1.8; }
+.modal-box ul { font-size: 9px; line-height: 2.2; padding-left: 1.2em; }
+.modal-box li { margin-bottom: 4px; }
 
 .btn {
   display: inline-block;
@@ -334,28 +340,6 @@ body {
 .hud { font-size: 9px; }
 .hud .ability-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-/* D-pad */
-.dpad {
-  display: grid;
-  grid-template-columns: 48px 48px 48px;
-  grid-template-rows: 48px 48px 48px;
-  gap: 4px;
-  justify-content: center;
-}
-.dpad-btn {
-  background: hsl(75 12% 20%);
-  border: 2px solid hsl(75 18% 25%);
-  color: hsl(75 40% 88%);
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: background 0.1s;
-}
-.dpad-btn:active { background: hsl(75 20% 35%); }
-
 /* Animations */
 @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -385,10 +369,15 @@ body {
 /* Scrollbar hide */
 ::-webkit-scrollbar { display: none; }
 
-@media (max-width: 400px) {
-  .cell { font-size: 14px; }
-  .hud { font-size: 7px; }
-  .btn { font-size: 8px; padding: 8px 14px; }
+/* 设置弹窗滑块样式 */
+.settings-slider {
+  width: 100%;
+  accent-color: hsl(75 80% 62%);
+  cursor: pointer;
+}
+.settings-value {
+  font-size: 14px;
+  color: hsl(75 80% 62%);
 }
 </style>
 </head>
@@ -428,7 +417,7 @@ const ABILITY_NAMES = {
 
 // 棋盘类型（数量随尺寸变化）
 const BOARD_TYPES_5 = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'green', 'orange', 'purple', 'king'];
-const BOARD_TYPES_8 = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'spawn', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'spawn', 'green', 'orange', 'purple', 'king', 'spawn']; // 示例，实际可调整
+const BOARD_TYPES_8 = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'spawn', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'spawn', 'green', 'orange', 'purple', 'king', 'spawn'];
 
 const BOARD_LABELS = {
   spawn:  '出生点',
@@ -470,11 +459,13 @@ let gameState = {
   score: 0,
   abilityCount: 0,
   visitedRooms: new Set(),
-  boardSize: 5,   // 当前棋盘尺寸
+  boardSize: 5,
 };
 
+let pieceFontSize = 32;
+
 // ============================================================
-// UTILITY (动态尺寸)
+// UTILITY
 // ============================================================
 
 function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
@@ -483,21 +474,110 @@ function pick(arr) { return arr[randInt(0, arr.length - 1)]; }
 function inBounds(r, c, size) { return r >= 0 && r < size && c >= 0 && c < size; }
 
 // ============================================================
+// 棋子字号设置
+// ============================================================
+
+function loadPieceFontSize() {
+  try {
+    const saved = localStorage.getItem('roguechess_piece_font_size');
+    if (saved) {
+      pieceFontSize = parseInt(saved, 10);
+      if (isNaN(pieceFontSize) || pieceFontSize < 16) pieceFontSize = 16;
+      if (pieceFontSize > 64) pieceFontSize = 64;
+    }
+  } catch (e) { /* ignore */ }
+  const style = document.createElement('style');
+  style.id = 'piece-font-style';
+  style.textContent = `.piece { font-size: ${pieceFontSize}px !important; }`;
+  const old = document.getElementById('piece-font-style');
+  if (old) old.remove();
+  document.head.appendChild(style);
+}
+
+function savePieceFontSize(size) {
+  pieceFontSize = size;
+  try {
+    localStorage.setItem('roguechess_piece_font_size', String(size));
+  } catch (e) { /* ignore */ }
+  loadPieceFontSize();
+  if (gameState.phase === 'playing' || gameState.phase === 'over') {
+    render();
+  }
+}
+
+// ============================================================
+// 帮助功能
+// ============================================================
+
+function openHelp() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'help-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>📖 玩法说明</h2>
+      <div style="font-size: 8px; line-height: 2.2;">
+        <p><strong>目标</strong>：操控白色棋子 <span style="color:hsl(75,80%,62%);">♙</span> 击败黑色国王 <span style="color:hsl(0,70%,55%);">♚</span>，每局胜利会记录得分。</p>
+
+        <p><strong>移动规则</strong>：点击棋盘格子移动。初始可纵横向走 <strong>1格</strong>，斜向需解锁。收集能力可增强移动力。</p>
+
+        <p><strong>能力系统</strong>（收集房间内的彩色光球）：</p>
+        <ul>
+          <li><span style="color:hsl(50,80%,55%);">黄色</span>：纵横向步数 +1（最多 +4）</li>
+          <li><span style="color:hsl(210,70%,55%);">蓝色</span>：斜向步数 +1（需绿色解锁）</li>
+          <li><span style="color:hsl(140,60%,48%);">绿色</span>：解锁斜向移动</li>
+          <li><span style="color:hsl(25,80%,55%);">橙色</span>：可跳过 1 个阻挡棋子</li>
+          <li><span style="color:hsl(280,60%,55%);">紫色</span>：回合结束随机吃掉左右相邻格内 2 回合内到达的敌子</li>
+        </ul>
+
+        <p><strong>房间与探索</strong>：共 13（简单/普通）或 20（困难）个房间，通过传送门（红色格子）移动。每获得 3 个能力，所有<em>未访问</em>的房间会新增敌人。</p>
+
+        <p><strong>敌方棋子走法与吃子</strong>：</p>
+        <ul>
+          <li><span style="color:hsl(0,70%,55%);">♟ 兵</span>：正交移动 1 格（不能吃子），斜向 1 格吃玩家。</li>
+          <li><span style="color:hsl(0,70%,55%);">♝ 象</span>：沿斜线任意步，无阻挡时可吃。</li>
+          <li><span style="color:hsl(0,70%,55%);">♞ 马</span>：日字走法（跳越），可吃任意阻挡。</li>
+          <li><span style="color:hsl(0,70%,55%);">♜ 车</span>：沿直线任意步，无阻挡时可吃。</li>
+          <li><span style="color:hsl(0,70%,55%);">♛ 后</span>：沿直线或斜线任意步，无阻挡时可吃。</li>
+          <li><span style="color:hsl(0,70%,55%);">♚ 王</span>：周围 8 格任意移动，无阻挡时可吃。</li>
+        </ul>
+        <p><span style="color:hsl(75,20%,50%);">* 将领（象/马/车/后/王）永久死亡不重生，士兵在普通/困难模式下离开房间回归后会重生。</span></p>
+
+        <p><strong>分数</strong>：吃掉小兵 +1 分，象/马 +2 分，车 +3 分，后 +5 分。只有击败国王的通关分数才会计入最高纪录。</p>
+
+        <p><strong>快捷键</strong>：Tab 地图 | Ctrl 能力 | Esc 菜单</p>
+      </div>
+      <div style="text-align:center; margin-top:16px;">
+        <button class="btn primary" onclick="closeHelp()">关闭</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeHelp();
+  });
+}
+
+function closeHelp() {
+  const overlay = document.getElementById('help-overlay');
+  if (overlay) overlay.remove();
+}
+
+// ============================================================
 // DUNGEON GENERATION (动态尺寸)
 // ============================================================
 
 function generateDungeon(difficulty) {
   const size = (difficulty === 'hard') ? 8 : 5;
-  const roomCount = (size === 5) ? 13 : 20; // 8x8 更多房间
+  const roomCount = (size === 5) ? 13 : 20;
   const boardTypes = (size === 5) ? BOARD_TYPES_5 : BOARD_TYPES_8;
-  // 确保有足够的类型，若不够则重复
   let types = [];
-  while (types.length < roomCount) {
-    types = types.concat(boardTypes);
+  if (size === 5) {
+    types = [...boardTypes];
+  } else {
+    types = [...boardTypes];
   }
-  types = types.slice(0, roomCount);
 
-  // 生成网格坐标 (类似原算法，但适应更多房间)
   const gridPos = [];
   const occupied = new Set();
   gridPos[0] = { x: 0, y: 0 };
@@ -532,7 +612,6 @@ function generateDungeon(difficulty) {
     addFrontier(cell.x, cell.y);
   }
 
-  // 居中
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (let i = 0; i < roomCount; i++) {
     minX = Math.min(minX, gridPos[i].x);
@@ -547,7 +626,6 @@ function generateDungeon(difficulty) {
     gridPos[i].y -= cy;
   }
 
-  // 连接
   const connections = [];
   for (let i = 0; i < roomCount; i++) {
     for (let j = i + 1; j < roomCount; j++) {
@@ -559,30 +637,31 @@ function generateDungeon(difficulty) {
       else if (dy === 1) { edgeA = 2; edgeB = 0; }
       else if (dx === -1) { edgeA = 3; edgeB = 1; }
       else { edgeA = 1; edgeB = 3; }
-      const col = randInt(1, size - 2); // 传送门列/行位置
+      const col = randInt(1, size - 2);
       connections.push({ a: i, edgeA, b: j, edgeB, col });
     }
   }
 
-  // 分配类型，确保 spawn 在索引0
   const shuffledTypes = shuffle(types);
   const spawnIdx = shuffledTypes.indexOf('spawn');
   if (spawnIdx !== 0) { [shuffledTypes[0], shuffledTypes[spawnIdx]] = [shuffledTypes[spawnIdx], shuffledTypes[0]]; }
 
-  // 将 king 放在较远位置
-  const kingIdx = shuffledTypes.indexOf('king');
-  // 简单处理：如果 king 离 spawn 太近，交换
-  const kingDist = Math.abs(gridPos[kingIdx].x - gridPos[0].x) + Math.abs(gridPos[kingIdx].y - gridPos[0].y);
-  if (kingDist < 2) {
-    const candidates = [];
-    for (let i = 1; i < roomCount; i++) {
-      if (i === kingIdx) continue;
-      const d = Math.abs(gridPos[i].x - gridPos[0].x) + Math.abs(gridPos[i].y - gridPos[0].y);
-      if (d >= 2) candidates.push(i);
-    }
-    if (candidates.length > 0) {
-      const swap = pick(candidates);
-      [shuffledTypes[kingIdx], shuffledTypes[swap]] = [shuffledTypes[swap], shuffledTypes[kingIdx]];
+  const kingIndices = shuffledTypes.reduce((acc, t, idx) => { if (t === 'king') acc.push(idx); return acc; }, []);
+  if (kingIndices.length > 0) {
+    for (const ki of kingIndices) {
+      let maxDist = -1;
+      let swapIdx = -1;
+      for (let i = 1; i < roomCount; i++) {
+        if (shuffledTypes[i] === 'king') continue;
+        const d = Math.abs(gridPos[i].x - gridPos[0].x) + Math.abs(gridPos[i].y - gridPos[0].y);
+        if (d > maxDist) {
+          maxDist = d;
+          swapIdx = i;
+        }
+      }
+      if (swapIdx !== -1 && maxDist > 1) {
+        [shuffledTypes[ki], shuffledTypes[swapIdx]] = [shuffledTypes[swapIdx], shuffledTypes[ki]];
+      }
     }
   }
 
@@ -647,7 +726,7 @@ function generateBoard(index, type, allConnections, difficulty, size, isSpawn) {
   const diffConfig = {
     easy:   [2, 1],
     normal: [2, 1],
-    hard:   [3, 2], // 困难模式增加敌人数量
+    hard:   [3, 2],
   };
   const [pawnCount, advancedCount] = diffConfig[difficulty] || diffConfig.normal;
 
@@ -898,7 +977,7 @@ function getPlayerMoves(state) {
 }
 
 // ============================================================
-// AI (动态尺寸)
+// AI (含第一回合保护)
 // ============================================================
 
 function aiMove(state) {
@@ -1352,10 +1431,56 @@ function restartGame() {
 }
 
 // ============================================================
+// 设置功能
+// ============================================================
+
+function openSettings() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'settings-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>⚙ 设置</h2>
+      <div style="margin: 16px 0;">
+        <p style="font-size: 10px; margin-bottom: 8px;">棋子字号：<span class="settings-value" id="size-display">${pieceFontSize}px</span></p>
+        <input type="range" min="16" max="64" value="${pieceFontSize}" class="settings-slider" id="size-slider" />
+        <div style="display: flex; justify-content: space-between; font-size: 8px; color: hsl(75,20%,50%);">
+          <span>小</span>
+          <span>大</span>
+        </div>
+      </div>
+      <button class="btn primary" onclick="closeSettings()">确认</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const slider = document.getElementById('size-slider');
+  const display = document.getElementById('size-display');
+  slider.addEventListener('input', () => {
+    const val = parseInt(slider.value, 10);
+    display.textContent = val + 'px';
+    savePieceFontSize(val);
+  });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeSettings();
+  });
+}
+
+function closeSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) overlay.remove();
+  loadPieceFontSize();
+  if (gameState.phase === 'playing' || gameState.phase === 'over') {
+    render();
+  }
+}
+
+// ============================================================
 // RENDER
 // ============================================================
 
 function render() {
+  loadPieceFontSize();
   const app = document.getElementById('app');
   if (gameState.phase === 'menu') {
     app.innerHTML = renderMenu();
@@ -1375,33 +1500,20 @@ function renderMenu() {
   return `
     <div class="text-center" style="padding-top: 6vh; max-height: 100vh; overflow-y: auto;">
       <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
-      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">ROGUE CHESS</h1>
+      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">Rogue Chess</h1>
       <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 16px; line-height: 2;">
-        探索${gameState.boardSize === 8 ? '20' : '13'}个棋盘房间 · 收集能力 · 击败国王
+        探索地牢 · 收集能力 · 击败国王
       </p>
-
-      <div style="background: hsl(75 12% 16%); border: 2px solid hsl(75 15% 22%); border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; text-align: left; max-height: 260px; overflow-y: auto;">
-        <div style="font-size: 8px; color: hsl(75 40% 88%); line-height: 2.2;">
-          <div style="color: hsl(75 80% 62%); font-size: 9px; margin-bottom: 6px;">📖 玩法介绍</div>
-          <div>• 操控白色棋子 <span style="color:hsl(75,80%,62%);">♙</span> 在5×5棋盘上移动</div>
-          <div>• 击败 <span style="color:hsl(0,70%,55%);">黑色国王 ♚</span> 即可获胜</div>
-          <div>• 收集 <span style="color:hsl(50,80%,55%);">黄</span><span style="color:hsl(210,70%,55%);">蓝</span><span style="color:hsl(140,60%,48%);">绿</span><span style="color:hsl(25,80%,55%);">橙</span><span style="color:hsl(280,60%,55%);">紫</span> 能力提升移动力</div>
-          <div style="color: hsl(75 20% 50%);">  - 黄色：纵横向步数+1（最多+4）</div>
-          <div style="color: hsl(75 20% 50%);">  - 蓝色：斜向步数+1（需绿色解锁）</div>
-          <div style="color: hsl(75 20% 50%);">  - 绿色：解锁斜向移动</div>
-          <div style="color: hsl(75 20% 50%);">  - 橙色：可跳过1个阻挡棋子</div>
-          <div style="color: hsl(75 20% 50%);">  - 紫色：回合结束吃掉左右相邻的敌子</div>
-          <div>• 每获得 <span style="color:hsl(75,80%,62%);">3个能力</span>，尚未到达的房间将新增敌人</div>
-          <div>• <span style="color:hsl(0,65%,48%);">将领</span> 永久死亡不重生，<span style="color:hsl(140,60%,48%);">士兵</span> 在普通/困难模式下离房回归后重生</div>
-          <div>• 地图仅显示已访问的房间</div>
-          <div style="color: hsl(75 20% 50%);">• 快捷键：Tab地图 | Ctrl能力 | Esc菜单 | 方向键/WASD移动</div>
-        </div>
-      </div>
 
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;">
         <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单</button>
-        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">标准(推荐)</button>
+        <button class="btn diff-btn diff-normal" onclick="initGame('normal')">标准 (推荐)</button>
         <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难</button>
+      </div>
+
+      <div style="display:flex; justify-content:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
+        <button class="btn small" onclick="openHelp()">说明</button>
+        <button class="btn small" onclick="openSettings()">设置</button>
       </div>
 
       <p style="font-size: 8px; color: hsl(75 20% 50%); margin-top: 6px; line-height: 2;">
@@ -1409,7 +1521,7 @@ function renderMenu() {
       </p>
       <div style="margin-top: 16px; font-size: 7px; color: hsl(75 15% 35%); line-height: 2;">
         Tab 地图 | Ctrl 能力 | Esc 菜单<br>
-        方向键/点击 移动
+        点击棋盘格子移动
       </div>
     </div>
   `;
@@ -1534,7 +1646,6 @@ function renderGame() {
 
   const scoreDisplay = `得分: ${gameState.score}`;
 
-  // 动态设置grid样式
   const gridStyle = `grid-template-columns: repeat(${size}, 1fr); grid-template-rows: repeat(${size}, 1fr);`;
 
   return `
@@ -1576,7 +1687,8 @@ function renderGame() {
         <button class="btn small" id="btn-abilities">能力</button>
         <button class="btn small" id="btn-menu">菜单</button>
       </div>
-      <div style="font-size: 7px; color: hsl(75 15% 30%); text-align: center; margin-top: 8px; line-height: 2;">
+
+      <div style="font-size: 7px; color: hsl(75 15% 30%); text-align: center; margin-top: 12px; line-height: 2;">
         点击格子移动 | Tab地图 Ctrl能力 Esc菜单
       </div>
       ${gameState.captureAnimating ? '<div class="capture-overlay"></div>' : ''}
@@ -1730,7 +1842,6 @@ function drawMap(container) {
         cell.innerHTML = inner;
         cell.title = `${BOARD_LABELS[board.type]}`;
         container.appendChild(cell);
-      } else if (boardIdx !== undefined) {
       }
     }
   }
@@ -1825,23 +1936,11 @@ function bindEvents() {
   if (btnMap) btnMap.addEventListener('click', toggleMap);
   if (btnAbilities) btnAbilities.addEventListener('click', toggleAbilities);
   if (btnMenu) btnMenu.addEventListener('click', togglePause);
-
-  document.querySelectorAll('.dpad-btn[data-dir]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
-      const dir = btn.dataset.dir;
-      const dirMap = { up: [-1, 0], down: [1, 0], left: [0, -1], right: [0, 1] };
-      const [dr, dc] = dirMap[dir];
-      const nr = gameState.player.row + dr;
-      const nc = gameState.player.col + dc;
-      const board = gameState.boards[gameState.currentBoardIndex];
-      if (inBounds(nr, nc, board.size)) {
-        const isReachable = gameState.reachableCells.some(c => c.row === nr && c.col === nc);
-        if (isReachable) movePlayer(nr, nc);
-      }
-    });
-  });
 }
+
+// ============================================================
+// 键盘监听（仅保留菜单快捷键）
+// ============================================================
 
 document.addEventListener('keydown', (e) => {
   if (gameState.phase === 'menu') {
@@ -1882,8 +1981,6 @@ document.addEventListener('keydown', (e) => {
     }
     return;
   }
-
-
 });
 
 function showToast(msg, color) {
@@ -1902,6 +1999,7 @@ function showToast(msg, color) {
 // ============================================================
 
 loadStats();
+loadPieceFontSize();
 render();
 </script>
 </body>
