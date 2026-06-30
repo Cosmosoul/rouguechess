@@ -379,6 +379,37 @@ body {
   font-size: 14px;
   color: hsl(75 80% 62%);
 }
+
+/* 国王对话气泡样式 */
+.king-bubble {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px;
+  background: hsl(75 12% 18%);
+  border-radius: 12px;
+  border-left: 4px solid hsl(0 70% 48%);
+}
+.king-avatar {
+  font-size: 48px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+.king-text {
+  font-size: 10px;
+  line-height: 1.8;
+  color: hsl(75 40% 88%);
+  word-break: break-word;
+}
+.king-text .result-label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.result-win .king-text .result-label { color: hsl(140 55% 45%); }
+.result-lose .king-text .result-label { color: hsl(0 65% 48%); }
 </style>
 </head>
 <body>
@@ -428,6 +459,106 @@ const BOARD_LABELS = {
   purple: '紫色能力',
   king:   '国王房间',
 };
+
+// ============================================================
+// 国王语录库
+// ============================================================
+const KING_QUOTES = {
+  win: [
+    "可恶的人类...这局算你走运！",
+    "哼，不过是侥幸罢了！下次定要你好看！",
+    "我的王位...总有一天我会夺回来的！",
+    "你赢了一局，但战争远未结束！",
+    "……你这家伙，还挺厉害的嘛。",
+     "赢了就得意忘形？不过是棋盘上的偶然！",
+    "你的运气比你的棋艺好多了。",
+    "这局算你赢，但王位永远是我的。",
+    "哼，下次我会让我的马踢翻你的兵。",
+    "你的胜利就像流星，转瞬即逝。",
+    "别高兴太早，我的皇后只是在打盹。",
+    "你只是踩了狗屎运。",
+    "棋盘太小，容不下你的侥幸。",
+    "我的失败只是战略撤退。",
+    "你赢了，但你的走法丑得像猪拱地。",
+    "这次先让你尝尝甜头。",
+    "胜利的滋味如何？可惜你尝不了多久。",
+    "我的国王只是打了个喷嚏。",
+    "你打败了一个国王，却赢不了整场战争。",
+    "你的棋风就像醉酒的大象。",
+    "好吧，你赢了，但我要诅咒你的骰子。",
+    "下次我会让我的城堡碾碎你。",
+    "你只是在我的棋盘上画了个叉。",
+    "胜利属于你，但荣耀属于我。",
+    "你赢了棋，却输掉了风度。"
+  ],
+  lose: [
+    "哈哈，你这水平也敢来挑战我？",
+    "王座可不是你这种小卒能觊觎的！",
+    "回去练个一百年再来吧！",
+    "我的棋子们早就看穿你的把戏了。",
+    "就这？我还没认真呢。",
+    "你的战术简直像小孩过家家。",
+    "连我的小兵都比你聪明。",
+    "建议你改行去下跳棋。",
+    "国王的威严岂是你等能冒犯的？",
+    "你的失败从第一步就注定了。",
+    "棋盘上的风都比你懂策略。",
+    "我甚至没动用什么力气。",
+    "你确定你用的是象棋而不是飞行棋？",
+    "历史会记住你的惨败。",
+    "我见过更勇敢的耗子。",
+    "你的棋子都在替你羞愧。",
+    "这局棋够我笑一整年。",
+    "退下吧，这里不是你该来的地方。",
+    "你的国王要是看到你这表现，得气活过来。",
+    "输给我不是很正常的事吗？",
+    "你的棋子像没头的苍蝇。",
+    "你下棋比蜗牛爬还慢。",
+    "你的战术简直是灾难现场。",
+    "建议你改行当喜剧演员。",
+    "我的小兵都比你聪明。",
+    "你输得连棋盘都在笑。",
+    "你的国王吓得躲到棋盘底下了。",
+    "这局棋你下得比踩高跷还晃。",
+    "你的策略像用筛子打水。",
+    "就你这水平，也配挑战我？",
+    "你的失败是我今天最大的快乐。",
+    "你的每一步都是对我的侮辱。",
+    "我闭着眼都能赢你。",
+    "你的棋艺比你的品味还差。",
+    "你下棋的样子像在打蚊子。",
+    "我的棋子都替你害臊。",
+    "你输得不冤，因为根本没赢过。",
+    "你的脑子是不是被马踢过？",
+    "这局棋你唯一做对的事就是输。",
+    "你的走法比天气预报还难猜。",
+    "我的国王都懒得看你一眼。",
+    "你下棋像在跳踢踏舞。",
+    "你的失败是必然，就像太阳会落山。",
+    "你的棋力比我奶奶的针线活还差。",
+    "输给我，是你今天最大的成就。",
+    "你的每一步都在帮倒忙。",
+    "我的小兵都能把你当球踢。",
+    "你的战术就像用沙子筑城。",
+    "你下棋的天赋比你的头发还少。",
+    "你的失败让整个棋盘都松了口气。",
+    "你简直是在下棋界丢人现眼。",
+    "你的棋子都在抗议被你指挥。",
+    "你输得如此彻底，我都感动了。",
+    "你下棋的智商不如我的王冠重。",
+    "你的每一步都是错误示范。",
+    "我建议你改行去当裁判，至少不用动脑。",
+    "你的棋局就像一盘散沙。",
+    "你的失败是我午后的甜点。",
+    "你输得如此有创意，我都想给你颁奖。",
+    "别灰心，你至少输得很有风格——风格就是烂。"
+  ]
+};
+
+function getRandomQuote(type) {
+  const quotes = KING_QUOTES[type];
+  return quotes[Math.floor(Math.random() * quotes.length)];
+}
 
 // ============================================================
 // GAME STATE
@@ -494,13 +625,13 @@ function loadPieceFontSize() {
   document.head.appendChild(style);
 }
 
-function savePieceFontSize(size) {
+function savePieceFontSize(size, shouldRender = true) {
   pieceFontSize = size;
   try {
     localStorage.setItem('roguechess_piece_font_size', String(size));
   } catch (e) { /* ignore */ }
   loadPieceFontSize();
-  if (gameState.phase === 'playing' || gameState.phase === 'over') {
+  if (shouldRender && (gameState.phase === 'playing' || gameState.phase === 'over')) {
     render();
   }
 }
@@ -561,6 +692,53 @@ function openHelp() {
 function closeHelp() {
   const overlay = document.getElementById('help-overlay');
   if (overlay) overlay.remove();
+}
+
+// ============================================================
+// 设置功能（主菜单）
+// ============================================================
+
+function openSettings() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'settings-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>⚙ 设置</h2>
+      <div style="margin: 16px 0;">
+        <p style="font-size: 10px; margin-bottom: 8px;">棋子字号：<span class="settings-value" id="size-display-main">${pieceFontSize}px</span></p>
+        <input type="range" min="16" max="64" value="${pieceFontSize}" class="settings-slider" id="size-slider-main" />
+        <div style="display: flex; justify-content: space-between; font-size: 8px; color: hsl(75,20%,50%);">
+          <span>小</span>
+          <span>大</span>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <button class="btn primary" onclick="closeSettings()">确认</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const slider = document.getElementById('size-slider-main');
+  const display = document.getElementById('size-display-main');
+  slider.addEventListener('input', () => {
+    const val = parseInt(slider.value, 10);
+    display.textContent = val + 'px';
+    savePieceFontSize(val, true);
+  });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeSettings();
+  });
+}
+
+function closeSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) overlay.remove();
+  loadPieceFontSize();
+  if (gameState.phase === 'playing' || gameState.phase === 'over') {
+    render();
+  }
 }
 
 // ============================================================
@@ -1431,53 +1609,6 @@ function restartGame() {
 }
 
 // ============================================================
-// 设置功能
-// ============================================================
-
-function openSettings() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.id = 'settings-overlay';
-  overlay.innerHTML = `
-    <div class="modal-box">
-      <h2>⚙ 设置</h2>
-      <div style="margin: 16px 0;">
-        <p style="font-size: 10px; margin-bottom: 8px;">棋子字号：<span class="settings-value" id="size-display">${pieceFontSize}px</span></p>
-        <input type="range" min="16" max="64" value="${pieceFontSize}" class="settings-slider" id="size-slider" />
-        <div style="display: flex; justify-content: space-between; font-size: 8px; color: hsl(75,20%,50%);">
-          <span>小</span>
-          <span>大</span>
-        </div>
-      </div>
-      <div style="text-align: center; margin-top: 16px;">
-        <button class="btn primary" onclick="closeSettings()">确认</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-
-  const slider = document.getElementById('size-slider');
-  const display = document.getElementById('size-display');
-  slider.addEventListener('input', () => {
-    const val = parseInt(slider.value, 10);
-    display.textContent = val + 'px';
-    savePieceFontSize(val);
-  });
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeSettings();
-  });
-}
-
-function closeSettings() {
-  const overlay = document.getElementById('settings-overlay');
-  if (overlay) overlay.remove();
-  loadPieceFontSize();
-  if (gameState.phase === 'playing' || gameState.phase === 'over') {
-    render();
-  }
-}
-
-// ============================================================
 // RENDER
 // ============================================================
 
@@ -1502,7 +1633,7 @@ function renderMenu() {
   return `
     <div class="text-center" style="padding-top: 6vh; max-height: 100vh; overflow-y: auto;">
       <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
-      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">Rogue Chess</h1>
+      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">Rougue Chess</h1>
       <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 16px; line-height: 2;">
         探索地牢 · 收集能力 · 击败国王
       </p>
@@ -1529,18 +1660,29 @@ function renderMenu() {
   `;
 }
 
+// ============================================================
+// 新版游戏结束弹窗（国王对话气泡）
+// ============================================================
 function renderGameOver() {
   const isWin = gameState.result === 'win';
+  const quote = getRandomQuote(isWin ? 'win' : 'lose');
+  const resultLabel = isWin ? '✦ 胜 利 ✦' : '✗ 失 败 ✗';
+  const resultClass = isWin ? 'result-win' : 'result-lose';
+  const scoreInfo = `本局得分: ${gameState.score}  |  胜场: ${gameState.wins}`;
+
   return `
-    <div class="modal-overlay" style="position: relative; background: transparent;">
-      <div class="modal-box">
-        <h2 style="color: ${isWin ? 'hsl(140 55% 45%)' : 'hsl(0 65% 48%)'}">
-          ${isWin ? '★ 胜利 ★' : '✗ 失败 ✗'}
-        </h2>
-        <p style="font-size: 10px; line-height: 2;">
-          ${isWin ? '你击败了黑色国王！' : '你被敌方棋子吃掉了...'}<br>
-          本局得分: ${gameState.score} &nbsp;|&nbsp; 胜场: ${gameState.wins}
-        </p>
+    <div class="modal-overlay">
+      <div class="modal-box" style="max-width: 380px;">
+        <div class="king-bubble ${resultClass}">
+          <div class="king-avatar">♚</div>
+          <div class="king-text">
+            <span class="result-label">${resultLabel}</span>
+            <span style="font-size: 10px; line-height: 1.8;">“${quote}”</span>
+            <div style="margin-top: 8px; font-size: 8px; color: hsl(75 20% 50%); border-top: 1px solid hsl(75 15% 22%); padding-top: 8px;">
+              ${scoreInfo}
+            </div>
+          </div>
+        </div>
         <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
           <button class="btn primary" onclick="restartGame()">再来一局</button>
           <button class="btn" onclick="showMenu()">返回菜单</button>
@@ -1729,6 +1871,7 @@ function togglePause() {
   if (gameState.phase === 'paused') {
     gameState.phase = 'playing';
     pauseVisible = false;
+    document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
     render();
     return;
   }
@@ -1736,7 +1879,8 @@ function togglePause() {
   pauseVisible = true;
   mapVisible = false;
   abilitiesVisible = false;
-  renderOverlays();
+  document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
+  renderPauseOverlay();
 }
 
 function renderOverlays() {
@@ -1891,18 +2035,42 @@ function renderAbilitiesOverlay() {
   document.body.appendChild(overlay);
 }
 
+// ============================================================
+// 暂停菜单（包含字号调节）
+// ============================================================
+
 function renderPauseOverlay() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay dynamic-overlay';
   overlay.innerHTML = `
     <div class="modal-box">
       <h2>暂停</h2>
-      <button class="btn primary" onclick="resumeGame()" style="display:block;width:100%;margin-bottom:8px;">继续游戏</button>
-      <button class="btn" onclick="restartGame()" style="display:block;width:100%;margin-bottom:8px;">重新开始</button>
-      <button class="btn danger" onclick="quitToMenu()" style="display:block;width:100%;">退出游戏</button>
+      <div style="margin: 12px 0;">
+        <p style="font-size: 9px; margin-bottom: 4px;">棋子字号：<span class="settings-value" id="size-display-pause">${pieceFontSize}px</span></p>
+        <input type="range" min="16" max="64" value="${pieceFontSize}" class="settings-slider" id="size-slider-pause" />
+        <div style="display: flex; justify-content: space-between; font-size: 7px; color: hsl(75,20%,50%);">
+          <span>小</span>
+          <span>大</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <button class="btn primary" onclick="resumeGame()" style="width:100%;">继续游戏</button>
+        <button class="btn" onclick="restartGame()" style="width:100%;">重新开始</button>
+        <button class="btn danger" onclick="quitToMenu()" style="width:100%;">退出游戏</button>
+      </div>
     </div>
   `;
   document.body.appendChild(overlay);
+
+  const slider = document.getElementById('size-slider-pause');
+  const display = document.getElementById('size-display-pause');
+  if (slider) {
+    slider.addEventListener('input', () => {
+      const val = parseInt(slider.value, 10);
+      display.textContent = val + 'px';
+      savePieceFontSize(val, false);
+    });
+  }
 }
 
 function resumeGame() {
