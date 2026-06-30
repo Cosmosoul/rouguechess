@@ -1449,7 +1449,9 @@ function openSettings() {
           <span>大</span>
         </div>
       </div>
-      <button class="btn primary" onclick="closeSettings()">确认</button>
+      <div style="text-align: center; margin-top: 16px;">
+        <button class="btn primary" onclick="closeSettings()">确认</button>
+      </div>
     </div>
   `;
   document.body.appendChild(overlay);
@@ -1539,8 +1541,10 @@ function renderGameOver() {
           ${isWin ? '你击败了黑色国王！' : '你被敌方棋子吃掉了...'}<br>
           本局得分: ${gameState.score} &nbsp;|&nbsp; 胜场: ${gameState.wins}
         </p>
-        <button class="btn primary" onclick="restartGame()" style="margin-right: 8px;">再来一局</button>
-        <button class="btn" onclick="showMenu()">返回菜单</button>
+        <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+          <button class="btn primary" onclick="restartGame()">再来一局</button>
+          <button class="btn" onclick="showMenu()">返回菜单</button>
+        </div>
       </div>
     </div>
   `;
