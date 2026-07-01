@@ -7,7 +7,6 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-
   gtag('config', 'G-3V9SJHK0N0');
 </script>
 <meta charset="UTF-8" />
@@ -16,30 +15,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
+// Tailwind 配置使用 CSS 变量，实现皮肤动态切换
 tailwind.config = {
   theme: {
     extend: {
       colors: {
-        bg:           'hsl(75 30% 8%)',
-        surface:      'hsl(75 15% 14%)',
-        'surface-alt':'hsl(75 12% 20%)',
-        text:         'hsl(75 40% 88%)',
-        'text-muted': 'hsl(75 20% 50%)',
-        primary:      'hsl(75 70% 48%)',
-        accent:       'hsl(75 80% 62%)',
-        border:       'hsl(75 18% 25%)',
-        'cell-light': 'hsl(75 12% 72%)',
-        'cell-dark':  'hsl(75 12% 32%)',
-        danger:       'hsl(0 65% 48%)',
-        success:      'hsl(140 55% 45%)',
-        warning:      'hsl(45 70% 50%)',
-        info:         'hsl(210 55% 50%)',
-        portal:       'hsl(0 70% 48%)',
-        'ability-y':  'hsl(50 80% 55%)',
-        'ability-b':  'hsl(210 70% 55%)',
-        'ability-g':  'hsl(140 60% 48%)',
-        'ability-o':  'hsl(25 80% 55%)',
-        'ability-p':  'hsl(280 60% 55%)',
+        bg:           'var(--color-bg)',
+        surface:      'var(--color-surface)',
+        'surface-alt':'var(--color-surface-alt)',
+        text:         'var(--color-text)',
+        'text-muted': 'var(--color-text-muted)',
+        primary:      'var(--color-primary)',
+        accent:       'var(--color-accent)',
+        border:       'var(--color-border)',
+        'cell-light': 'var(--color-cell-light)',
+        'cell-dark':  'var(--color-cell-dark)',
+        danger:       'var(--color-danger)',
+        success:      'var(--color-success)',
+        warning:      'var(--color-warning)',
+        info:         'var(--color-info)',
+        portal:       'var(--color-portal)',
+        'ability-y':  'var(--color-ability-y)',
+        'ability-b':  'var(--color-ability-b)',
+        'ability-g':  'var(--color-ability-g)',
+        'ability-o':  'var(--color-ability-o)',
+        'ability-p':  'var(--color-ability-p)',
       },
       fontFamily: {
         pixel: ['"Press Start 2P"', 'monospace', 'sans-serif'],
@@ -49,14 +49,88 @@ tailwind.config = {
 };
 </script>
 <style>
+/* ========== CSS 变量定义（三款皮肤） ========== */
+/* 默认皮肤：深渊绿 (Default) */
+body.skin-default {
+  --color-bg: hsl(75 30% 8%);
+  --color-surface: hsl(75 15% 14%);
+  --color-surface-alt: hsl(75 12% 20%);
+  --color-text: hsl(75 40% 88%);
+  --color-text-muted: hsl(75 20% 50%);
+  --color-primary: hsl(75 70% 48%);
+  --color-accent: hsl(75 80% 62%);
+  --color-border: hsl(75 18% 25%);
+  --color-cell-light: hsl(75 12% 72%);
+  --color-cell-dark: hsl(75 12% 32%);
+  --color-danger: hsl(0 65% 48%);
+  --color-success: hsl(140 55% 45%);
+  --color-warning: hsl(45 70% 50%);
+  --color-info: hsl(210 55% 50%);
+  --color-portal: hsl(0 70% 48%);
+  --color-ability-y: hsl(50 80% 55%);
+  --color-ability-b: hsl(210 70% 55%);
+  --color-ability-g: hsl(140 60% 48%);
+  --color-ability-o: hsl(25 80% 55%);
+  --color-ability-p: hsl(280 60% 55%);
+}
+
+/* 皮肤二：深蓝冰霜 (Frost) */
+body.skin-frost {
+  --color-bg: hsl(210 25% 8%);
+  --color-surface: hsl(210 15% 14%);
+  --color-surface-alt: hsl(210 12% 20%);
+  --color-text: hsl(210 40% 88%);
+  --color-text-muted: hsl(210 20% 50%);
+  --color-primary: hsl(210 70% 48%);
+  --color-accent: hsl(210 80% 62%);
+  --color-border: hsl(210 18% 25%);
+  --color-cell-light: hsl(210 12% 72%);
+  --color-cell-dark: hsl(210 12% 32%);
+  --color-danger: hsl(0 65% 48%);
+  --color-success: hsl(140 55% 45%);
+  --color-warning: hsl(45 70% 50%);
+  --color-info: hsl(210 55% 50%);
+  --color-portal: hsl(0 70% 48%);
+  --color-ability-y: hsl(50 80% 55%);
+  --color-ability-b: hsl(210 70% 55%);
+  --color-ability-g: hsl(140 60% 48%);
+  --color-ability-o: hsl(25 80% 55%);
+  --color-ability-p: hsl(280 60% 55%);
+}
+
+/* 皮肤三：琥珀暖阳 (Amber) */
+body.skin-amber {
+  --color-bg: hsl(35 25% 8%);
+  --color-surface: hsl(35 15% 14%);
+  --color-surface-alt: hsl(35 12% 20%);
+  --color-text: hsl(35 40% 88%);
+  --color-text-muted: hsl(35 20% 50%);
+  --color-primary: hsl(35 70% 48%);
+  --color-accent: hsl(35 80% 62%);
+  --color-border: hsl(35 18% 25%);
+  --color-cell-light: hsl(35 12% 72%);
+  --color-cell-dark: hsl(35 12% 32%);
+  --color-danger: hsl(0 65% 48%);
+  --color-success: hsl(140 55% 45%);
+  --color-warning: hsl(45 70% 50%);
+  --color-info: hsl(210 55% 50%);
+  --color-portal: hsl(0 70% 48%);
+  --color-ability-y: hsl(50 80% 55%);
+  --color-ability-b: hsl(210 70% 55%);
+  --color-ability-g: hsl(140 60% 48%);
+  --color-ability-o: hsl(25 80% 55%);
+  --color-ability-p: hsl(280 60% 55%);
+}
+
+/* ========== 全局基础样式（使用变量） ========== */
 *, *::before, *::after { box-sizing: border-box; }
 img, video { max-width: 100%; height: auto; display: block; }
 body { overflow-wrap: break-word; }
 
 body {
   font-family: 'Press Start 2P', monospace, sans-serif;
-  background: hsl(75 30% 8%);
-  color: hsl(75 40% 88%);
+  background: var(--color-bg);
+  color: var(--color-text);
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
@@ -65,6 +139,7 @@ body {
   align-items: center;
   justify-content: center;
   overflow-x: hidden;
+  transition: background 0.3s, color 0.3s;
 }
 
 #app {
@@ -73,7 +148,6 @@ body {
   padding: 12px;
 }
 
-/* CRT scanline overlay */
 #app::before {
   content: '';
   position: fixed;
@@ -83,14 +157,15 @@ body {
   z-index: 999;
 }
 
-/* Board */
+/* 棋盘 */
 .board-grid {
   display: grid;
   aspect-ratio: 1;
-  border: 3px solid hsl(75 18% 25%);
+  border: 3px solid var(--color-border);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
+  transition: border-color 0.3s;
 }
 
 .cell {
@@ -100,29 +175,28 @@ body {
   font-size: clamp(16px, 4vw, 28px);
   cursor: pointer;
   position: relative;
-  transition: background-color 0.1s;
+  transition: background-color 0.1s, box-shadow 0.1s;
   min-width: 0;
   aspect-ratio: 1;
 }
 
-.cell.light { background: hsl(75 12% 72%); }
-.cell.dark  { background: hsl(75 12% 32%); }
-.cell.portal { background: hsl(0 65% 35%) !important; }
-.cell.portal.light-override { background: hsl(0 60% 40%) !important; }
-.cell.reachable { box-shadow: inset 0 0 0 3px hsl(75 80% 62%); }
+.cell.light { background: var(--color-cell-light); }
+.cell.dark  { background: var(--color-cell-dark); }
+.cell.portal { background: var(--color-portal) !important; }
+.cell.portal.light-override { background: var(--color-portal) !important; filter: brightness(1.1); }
+.cell.reachable { box-shadow: inset 0 0 0 3px var(--color-accent); }
 .cell.reachable::after {
   content: '';
   position: absolute;
   inset: 25%;
   border-radius: 50%;
-  background: hsl(75 80% 62%);
+  background: var(--color-accent);
   opacity: 0.5;
   pointer-events: none;
 }
-.cell.player-pos { box-shadow: inset 0 0 0 3px hsl(75 80% 62%); }
+.cell.player-pos { box-shadow: inset 0 0 0 3px var(--color-accent); }
 .cell:hover { filter: brightness(1.15); }
 
-/* 棋子字号由 JS 动态控制，此处设置默认值 */
 .piece {
   line-height: 1;
   pointer-events: none;
@@ -168,7 +242,6 @@ body {
   50%      { box-shadow: 0 0 8px currentColor, 0 0 16px currentColor; opacity: 1; }
 }
 
-/* Board slide animation */
 .board-wrapper {
   position: relative;
   overflow: hidden;
@@ -190,10 +263,9 @@ body {
 .board-slide.slide-in-right  { transform: translateX(-110%); opacity: 0; }
 .board-slide.slide-reset     { transform: translate(0, 0); opacity: 1; }
 
-/* Capture animation */
 @keyframes captureFlash {
-  0%, 100% { background: hsl(0, 70%, 30%); }
-  50%      { background: hsl(0, 80%, 20%); }
+  0%, 100% { background: var(--color-danger); opacity: 0.6; }
+  50%      { background: var(--color-danger); opacity: 0.3; }
 }
 .cell-captured {
   animation: captureFlash 0.3s ease-in-out 3;
@@ -211,7 +283,7 @@ body {
   50%      { opacity: 0.7; }
 }
 
-/* Modal overlay */
+/* 弹窗 */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -224,8 +296,8 @@ body {
 }
 
 .modal-box {
-  background: hsl(75 15% 14%);
-  border: 3px solid hsl(75 18% 25%);
+  background: var(--color-surface);
+  border: 3px solid var(--color-border);
   padding: 24px;
   max-width: 380px;
   width: 90%;
@@ -233,9 +305,10 @@ body {
   animation: scaleIn 0.2s;
   max-height: 90vh;
   overflow-y: auto;
+  transition: background 0.3s, border-color 0.3s;
 }
 
-.modal-box h2 { font-size: 14px; margin-bottom: 16px; text-align: center; }
+.modal-box h2 { font-size: 14px; margin-bottom: 16px; text-align: center; color: var(--color-accent); }
 .modal-box p  { font-size: 10px; margin-bottom: 12px; line-height: 1.8; }
 .modal-box ul { font-size: 9px; line-height: 2.2; padding-left: 1.2em; }
 .modal-box li { margin-bottom: 4px; }
@@ -245,21 +318,22 @@ body {
   padding: 10px 20px;
   font-family: 'Press Start 2P', monospace, sans-serif;
   font-size: 10px;
-  border: 2px solid hsl(75 18% 25%);
-  background: hsl(75 12% 20%);
-  color: hsl(75 40% 88%);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.1s;
   text-transform: uppercase;
 }
-.btn:hover { background: hsl(75 20% 30%); border-color: hsl(75 80% 62%); }
-.btn.primary { background: hsl(75 70% 48%); color: hsl(75 30% 8%); border-color: hsl(75 70% 48%); }
-.btn.primary:hover { background: hsl(75 80% 55%); }
-.btn.danger { background: hsl(0 50% 35%); border-color: hsl(0 50% 35%); }
+.btn:hover { background: var(--color-primary); border-color: var(--color-accent); }
+.btn.primary { background: var(--color-primary); color: var(--color-bg); border-color: var(--color-primary); }
+.btn.primary:hover { background: var(--color-accent); }
+.btn.danger { background: var(--color-danger); border-color: var(--color-danger); }
 .btn.danger:hover { background: hsl(0 55% 42%); }
 .btn.small { padding: 6px 12px; font-size: 8px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
-/* Difficulty buttons */
+/* 难度按钮 */
 .diff-btn {
   width: 260px;
   max-width: 90vw;
@@ -268,15 +342,46 @@ body {
   text-align: center;
   border-radius: 2px;
   transition: all 0.15s;
+  background: var(--color-surface-alt);
+  border: 2px solid var(--color-border);
+  color: var(--color-text);
 }
-.diff-easy { border-color: hsl(140 50% 35%); color: hsl(140 60% 65%); }
-.diff-easy:hover { background: hsl(140 30% 18%); border-color: hsl(140 60% 55%); }
-.diff-normal { border-color: hsl(50 60% 40%); color: hsl(50 80% 62%); }
-.diff-normal:hover { background: hsl(50 25% 18%); border-color: hsl(50 80% 55%); }
-.diff-hard { border-color: hsl(0 50% 35%); color: hsl(0 60% 58%); }
-.diff-hard:hover { background: hsl(0 25% 18%); border-color: hsl(0 60% 50%); }
+.diff-easy { border-color: var(--color-success); color: var(--color-success); }
+.diff-easy:hover { background: var(--color-success); color: var(--color-bg); }
+.diff-normal { border-color: var(--color-warning); color: var(--color-warning); }
+.diff-normal:hover { background: var(--color-warning); color: var(--color-bg); }
+.diff-hard { border-color: var(--color-danger); color: var(--color-danger); }
+.diff-hard:hover { background: var(--color-danger); color: var(--color-bg); }
 
-/* Map overlay */
+.tutorial-btn {
+  width: 260px;
+  max-width: 90vw;
+  padding: 12px 16px;
+  font-size: 9px;
+  text-align: center;
+  border-radius: 2px;
+  background: var(--color-surface-alt);
+  border: 2px solid hsl(280 50% 40%);
+  color: hsl(280 60% 65%);
+  transition: all 0.15s;
+}
+.tutorial-btn:hover { background: hsl(280 25% 18%); border-color: hsl(280 60% 55%); }
+
+.shop-btn {
+  width: 260px;
+  max-width: 90vw;
+  padding: 12px 16px;
+  font-size: 9px;
+  text-align: center;
+  border-radius: 2px;
+  background: var(--color-surface-alt);
+  border: 2px solid hsl(45 60% 40%);
+  color: hsl(45 80% 62%);
+  transition: all 0.15s;
+}
+.shop-btn:hover { background: hsl(45 25% 18%); border-color: hsl(45 80% 55%); }
+
+/* 地图 */
 .map-overlay {
   position: fixed;
   inset: 0;
@@ -296,46 +401,39 @@ body {
   max-height: 500px;
 }
 
-.map-node, .map-cell {
+.map-cell {
   position: absolute;
-  border: 2px solid hsl(75 18% 25%);
-  background: hsl(75 12% 20%);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface-alt);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 8px;
   cursor: default;
   border-radius: 4px;
+  transition: background 0.3s;
 }
 .map-cell.map-current {
-  border-color: hsl(75 80% 62%);
-  box-shadow: 0 0 10px hsl(75 80% 62%);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 10px var(--color-accent);
   animation: mapPulse 0.8s ease-in-out infinite alternate;
 }
 @keyframes mapPulse {
-  from { box-shadow: 0 0 6px hsl(75 80% 62%); }
-  to   { box-shadow: 0 0 14px hsl(75 80% 62%); }
+  from { box-shadow: 0 0 6px var(--color-accent); }
+  to   { box-shadow: 0 0 14px var(--color-accent); }
 }
 .map-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .map-dot-dim { opacity: 0.35; }
 .map-crown { font-size: 10px; margin-left: 2px; }
-.map-spawn { font-size: 12px; }
-.map-empty {
-  position: absolute;
-  border: 1px dashed hsl(75 8% 18%);
-  background: transparent;
-  border-radius: 4px;
-  opacity: 0.3;
-}
 
-/* Ability panel */
+/* 能力面板 */
 .ability-panel {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: hsl(75 15% 14%);
-  border: 2px solid hsl(75 18% 25%);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
   padding: 16px;
   z-index: 85;
   max-width: 360px;
@@ -343,13 +441,13 @@ body {
   animation: fadeIn 0.15s;
   font-size: 9px;
   line-height: 2;
+  transition: background 0.3s;
 }
 
-/* HUD */
 .hud { font-size: 9px; }
 .hud .ability-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-/* Animations */
+/* 动画 */
 @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -366,39 +464,63 @@ body {
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: hsl(75 15% 14%);
-  border: 2px solid hsl(75 80% 62%);
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent);
   padding: 12px 20px;
   z-index: 110;
   font-size: 10px;
   animation: scaleIn 0.2s;
   text-align: center;
+  color: var(--color-text);
+  transition: background 0.3s;
 }
 
-/* Scrollbar hide */
 ::-webkit-scrollbar { display: none; }
 
-/* 设置弹窗滑块样式 */
 .settings-slider {
   width: 100%;
-  accent-color: hsl(75 80% 62%);
+  accent-color: var(--color-accent);
   cursor: pointer;
 }
 .settings-value {
   font-size: 14px;
-  color: hsl(75 80% 62%);
+  color: var(--color-accent);
 }
 
-/* 国王对话气泡样式 */
+/* 皮肤选择器样式 */
+.skin-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-surface-alt);
+}
+.skin-option:hover { border-color: var(--color-accent); }
+.skin-option.selected { border-color: var(--color-accent); background: var(--color-primary); color: var(--color-bg); }
+.skin-option.selected .skin-name { color: var(--color-bg); }
+.skin-preview {
+  width: 40px; height: 40px; border-radius: 6px;
+  border: 2px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.skin-name { font-size: 10px; color: var(--color-text); flex: 1; }
+
+/* 国王对话气泡 */
 .king-bubble {
   display: flex;
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 20px;
   padding: 12px;
-  background: hsl(75 12% 18%);
+  background: var(--color-surface-alt);
   border-radius: 12px;
-  border-left: 4px solid hsl(0 70% 48%);
+  border-left: 4px solid var(--color-danger);
+  transition: background 0.3s;
 }
 .king-avatar {
   font-size: 48px;
@@ -409,7 +531,7 @@ body {
 .king-text {
   font-size: 10px;
   line-height: 1.8;
-  color: hsl(75 40% 88%);
+  color: var(--color-text);
   word-break: break-word;
 }
 .king-text .result-label {
@@ -417,16 +539,47 @@ body {
   font-size: 12px;
   margin-bottom: 6px;
 }
-.result-win .king-text .result-label { color: hsl(140 55% 45%); }
-.result-lose .king-text .result-label { color: hsl(0 65% 48%); }
+.result-win .king-text .result-label { color: var(--color-success); }
+.result-lose .king-text .result-label { color: var(--color-danger); }
+
+/* 商店卡片 */
+.shop-item-card {
+  border: 2px solid var(--color-border);
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: border-color 0.15s, background 0.3s;
+}
+.shop-item-card:hover { border-color: hsl(45 60% 40%); }
+.shop-item-icon { font-size: 28px; flex-shrink: 0; width: 40px; text-align: center; }
+.shop-item-info { flex: 1; min-width: 0; }
+.shop-item-name { font-size: 9px; color: var(--color-accent); margin-bottom: 2px; }
+.shop-item-desc { font-size: 7px; color: var(--color-text-muted); line-height: 1.6; }
+.shop-item-price { font-size: 8px; color: var(--color-warning); margin-top: 4px; }
+.shop-item-owned { font-size: 8px; color: var(--color-success); margin-top: 4px; }
+
+.points-display {
+  font-size: 11px;
+  color: var(--color-warning);
+  text-align: center;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: var(--color-surface-alt);
+  border-radius: 4px;
+  border: 1px solid hsl(45 30% 25%);
+}
 </style>
 </head>
-<body>
+<body class="skin-default">
 <div id="app"></div>
 
 <script>
 // ============================================================
-// ROGUE CHESS - 肉鸽国际象棋 (动态棋盘尺寸)
+// ROGUE CHESS - 肉鸽国际象棋 (完整版：皮肤切换 + 积分商店 + 教学模式)
 // ============================================================
 
 const PIECE_SYMBOLS = {
@@ -455,7 +608,6 @@ const ABILITY_NAMES = {
   purple: '吃过路兵',
 };
 
-// 棋盘类型（数量随尺寸变化）
 const BOARD_TYPES_5 = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'blue', 'blue', 'blue', 'blue', 'green', 'orange', 'purple', 'king'];
 const BOARD_TYPES_8 = ['spawn', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'spawn', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'spawn', 'green', 'orange', 'purple', 'king', 'spawn'];
 
@@ -469,98 +621,29 @@ const BOARD_LABELS = {
   king:   '国王房间',
 };
 
+const SHOP_ITEMS = [
+  { id: 'lottery', name: '抽奖券', price: 20, icon: '🎟', desc: '开局20%概率随机获得一个技能', color: 'hsl(50,80%,55%)' },
+  { id: 'super_lottery', name: '超级抽奖券', price: 50, icon: '🎫', desc: '开局40%概率随机获得一个技能', color: 'hsl(280,60%,55%)' },
+  { id: 'death_immunity', name: '免死金牌', price: 50, icon: '🛡', desc: '抵消一次死亡效果，吃掉你的棋子被清除，原地复活', color: 'hsl(0,70%,48%)' },
+  { id: 'invincible', name: '无敌之人', price: 1000, icon: '👑', desc: '下局开局直接解锁全部技能', color: 'hsl(45,80%,62%)' },
+];
+
+// 皮肤定义
+const SKINS = [
+  { id: 'default', name: '深渊绿', icon: '🌿', preview: 'hsl(75 30% 8%)' },
+  { id: 'frost', name: '冰霜蓝', icon: '❄️', preview: 'hsl(210 25% 8%)' },
+  { id: 'amber', name: '琥珀暖', icon: '🔥', preview: 'hsl(35 25% 8%)' },
+];
+
 // ============================================================
 // 国王语录库
 // ============================================================
 const KING_QUOTES = {
   win: [
-    "可恶的人类...这局算你走运！",
-    "哼，不过是侥幸罢了！下次定要你好看！",
-    "我的王位...总有一天我会夺回来的！",
-    "你赢了一局，但战争远未结束！",
-    "……你这家伙，还挺厉害的嘛。",
-     "赢了就得意忘形？不过是棋盘上的偶然！",
-    "你的运气比你的棋艺好多了。",
-    "这局算你赢，但王位永远是我的。",
-    "哼，下次我会让我的马踢翻你的兵。",
-    "你的胜利就像流星，转瞬即逝。",
-    "别高兴太早，我的皇后只是在打盹。",
-    "你只是踩了狗屎运。",
-    "棋盘太小，容不下你的侥幸。",
-    "我的失败只是战略撤退。",
-    "你赢了，但你的走法丑得像猪拱地。",
-    "这次先让你尝尝甜头。",
-    "胜利的滋味如何？可惜你尝不了多久。",
-    "我的国王只是打了个喷嚏。",
-    "你打败了一个国王，却赢不了整场战争。",
-    "你的棋风就像醉酒的大象。",
-    "好吧，你赢了，但我要诅咒你的骰子。",
-    "下次我会让我的城堡碾碎你。",
-    "你只是在我的棋盘上画了个叉。",
-    "胜利属于你，但荣耀属于我。",
-    "你赢了棋，却输掉了风度。"
+    "可恶的人类...这局算你走运！","哼，不过是侥幸罢了！下次定要你好看！","我的王位...总有一天我会夺回来的！","你赢了一局，但战争远未结束！","……你这家伙，还挺厉害的嘛。","赢了就得意忘形？不过是棋盘上的偶然！","你的运气比你的棋艺好多了。","这局算你赢，但王位永远是我的。","哼，下次我会让我的马踢翻你的兵。","你的胜利就像流星，转瞬即逝。","别高兴太早，我的皇后只是在打盹。","你只是踩了狗屎运。","棋盘太小，容不下你的侥幸。","我的失败只是战略撤退。","你赢了，但你的走法丑得像猪拱地。","这次先让你尝尝甜头。","胜利的滋味如何？可惜你尝不了多久。","我的国王只是打了个喷嚏。","你打败了一个国王，却赢不了整场战争。","你的棋风就像醉酒的大象。","好吧，你赢了，但我要诅咒你的骰子。","下次我会让我的城堡碾碎你。","你只是在我的棋盘上画了个叉。","胜利属于你，但荣耀属于我。","你赢了棋，却输掉了风度。"
   ],
   lose: [
-    "哈哈，你这水平也敢来挑战我？",
-    "王座可不是你这种小卒能觊觎的！",
-    "回去练个一百年再来吧！",
-    "我的棋子们早就看穿你的把戏了。",
-    "就这？我还没认真呢。",
-    "你的战术简直像小孩过家家。",
-    "连我的小兵都比你聪明。",
-    "建议你改行去下跳棋。",
-    "国王的威严岂是你等能冒犯的？",
-    "你的失败从第一步就注定了。",
-    "棋盘上的风都比你懂策略。",
-    "我甚至没动用什么力气。",
-    "你确定你用的是象棋而不是飞行棋？",
-    "历史会记住你的惨败。",
-    "我见过更勇敢的耗子。",
-    "你的棋子都在替你羞愧。",
-    "这局棋够我笑一整年。",
-    "退下吧，这里不是你该来的地方。",
-    "你的国王要是看到你这表现，得气活过来。",
-    "输给我不是很正常的事吗？",
-    "你的棋子像没头的苍蝇。",
-    "你下棋比蜗牛爬还慢。",
-    "你的战术简直是灾难现场。",
-    "建议你改行当喜剧演员。",
-    "我的小兵都比你聪明。",
-    "你输得连棋盘都在笑。",
-    "你的国王吓得躲到棋盘底下了。",
-    "这局棋你下得比踩高跷还晃。",
-    "你的策略像用筛子打水。",
-    "就你这水平，也配挑战我？",
-    "你的失败是我今天最大的快乐。",
-    "你的每一步都是对我的侮辱。",
-    "我闭着眼都能赢你。",
-    "你的棋艺比你的品味还差。",
-    "你下棋的样子像在打蚊子。",
-    "我的棋子都替你害臊。",
-    "你输得不冤，因为根本没赢过。",
-    "你的脑子是不是被马踢过？",
-    "这局棋你唯一做对的事就是输。",
-    "你的走法比天气预报还难猜。",
-    "我的国王都懒得看你一眼。",
-    "你下棋像在跳踢踏舞。",
-    "你的失败是必然，就像太阳会落山。",
-    "你的棋力比我奶奶的针线活还差。",
-    "输给我，是你今天最大的成就。",
-    "你的每一步都在帮倒忙。",
-    "我的小兵都能把你当球踢。",
-    "你的战术就像用沙子筑城。",
-    "你下棋的天赋比你的头发还少。",
-    "你的失败让整个棋盘都松了口气。",
-    "你简直是在下棋界丢人现眼。",
-    "你的棋子都在抗议被你指挥。",
-    "你输得如此彻底，我都感动了。",
-    "你下棋的智商不如我的王冠重。",
-    "你的每一步都是错误示范。",
-    "我建议你改行去当裁判，至少不用动脑。",
-    "你的棋局就像一盘散沙。",
-    "你的失败是我午后的甜点。",
-    "你输得如此有创意，我都想给你颁奖。",
-    "别灰心，你至少输得很有风格——风格就是烂。"
+    "哈哈，你这水平也敢来挑战我？","王座可不是你这种小卒能觊觎的！","回去练个一百年再来吧！","我的棋子们早就看穿你的把戏了。","就这？我还没认真呢。","你的战术简直像小孩过家家。","连我的小兵都比你聪明。","建议你改行去下跳棋。","国王的威严岂是你等能冒犯的？","你的失败从第一步就注定了。","棋盘上的风都比你懂策略。","我甚至没动用什么力气。","你确定你用的是象棋而不是飞行棋？","历史会记住你的惨败。","我见过更勇敢的耗子。","你的棋子都在替你羞愧。","这局棋够我笑一整年。","退下吧，这里不是你该来的地方。","你的国王要是看到你这表现，得气活过来。","输给我不是很正常的事吗？","你的棋子像没头的苍蝇。","你下棋比蜗牛爬还慢。","你的战术简直是灾难现场。","建议你改行当喜剧演员。","我的小兵都比你聪明。","你输得连棋盘都在笑。","你的国王吓得躲到棋盘底下了。","这局棋你下得比踩高跷还晃。","你的策略像用筛子打水。","就你这水平，也配挑战我？","你的失败是我今天最大的快乐。","你的每一步都是对我的侮辱。","我闭着眼都能赢你。","你的棋艺比你的品味还差。","你下棋的样子像在打蚊子。","我的棋子都替你害臊。","你输得不冤，因为根本没赢过。","你的脑子是不是被马踢过？","这局棋你唯一做对的事就是输。","你的走法比天气预报还难猜。","我的国王都懒得看你一眼。","你下棋像在跳踢踏舞。","你的失败是必然，就像太阳会落山。","你的棋力比我奶奶的针线活还差。","输给我，是你今天最大的成就。","你的每一步都在帮倒忙。","我的小兵都能把你当球踢。","你的战术就像用沙子筑城。","你下棋的天赋比你的头发还少。","你的失败让整个棋盘都松了口气。","你简直是在下棋界丢人现眼。","你的棋子都在抗议被你指挥。","你输得如此彻底，我都感动了。","你下棋的智商不如我的王冠重。","你的每一步都是错误示范。","我建议你改行去当裁判，至少不用动脑。","你的棋局就像一盘散沙。","你的失败是我午后的甜点。","你输得如此有创意，我都想给你颁奖。","别灰心，你至少输得很有风格——风格就是烂。"
   ]
 };
 
@@ -600,9 +683,90 @@ let gameState = {
   abilityCount: 0,
   visitedRooms: new Set(),
   boardSize: 5,
+  isTutorial: false,
+  tutorialLevel: 0,
+  tutorialTargetType: null,
+  tutorialPortalAdded: false,
+  showTutorialPrompt: false,
+  showTutorialComplete: false,
+  tutorialPromptText: '',
+  tutorialCompleteText: '',
+  shopItems: { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 },
+  deathImmunityUsed: false,
 };
 
 let pieceFontSize = 32;
+
+// ============================================================
+// 皮肤管理
+// ============================================================
+
+function loadSkin() {
+  try {
+    const saved = localStorage.getItem('roguechess_skin');
+    return saved && SKINS.some(s => s.id === saved) ? saved : 'default';
+  } catch (e) { return 'default'; }
+}
+
+function saveSkin(skinId) {
+  try {
+    localStorage.setItem('roguechess_skin', skinId);
+  } catch (e) { /* ignore */ }
+}
+
+function applySkin(skinId) {
+  const body = document.body;
+  body.classList.remove('skin-default', 'skin-frost', 'skin-amber');
+  body.classList.add(`skin-${skinId}`);
+  // 强制重绘以应用变量
+  body.style.transition = 'background 0.3s, color 0.3s';
+  setTimeout(() => { body.style.transition = ''; }, 300);
+}
+
+// ============================================================
+// 积分与道具持久化
+// ============================================================
+
+function loadPoints() {
+  try {
+    const p = parseInt(localStorage.getItem('roguechess_points') || '0');
+    return isNaN(p) ? 0 : p;
+  } catch (e) { return 0; }
+}
+
+function savePoints(points) {
+  try {
+    localStorage.setItem('roguechess_points', String(points));
+  } catch (e) { /* ignore */ }
+}
+
+function loadShopItems() {
+  try {
+    const data = localStorage.getItem('roguechess_shop_items');
+    if (data) {
+      const parsed = JSON.parse(data);
+      return {
+        lottery: parsed.lottery || 0,
+        super_lottery: parsed.super_lottery || 0,
+        death_immunity: parsed.death_immunity || 0,
+        invincible: parsed.invincible || 0,
+      };
+    }
+  } catch (e) { /* ignore */ }
+  return { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 };
+}
+
+function saveShopItems(items) {
+  try {
+    localStorage.setItem('roguechess_shop_items', JSON.stringify(items));
+  } catch (e) { /* ignore */ }
+}
+
+function clearShopItems() {
+  try {
+    localStorage.removeItem('roguechess_shop_items');
+  } catch (e) { /* ignore */ }
+}
 
 // ============================================================
 // UTILITY
@@ -640,7 +804,7 @@ function savePieceFontSize(size, shouldRender = true) {
     localStorage.setItem('roguechess_piece_font_size', String(size));
   } catch (e) { /* ignore */ }
   loadPieceFontSize();
-  if (shouldRender && (gameState.phase === 'playing' || gameState.phase === 'over')) {
+  if (shouldRender && (gameState.phase === 'playing' || gameState.phase === 'over' || gameState.phase === 'paused')) {
     render();
   }
 }
@@ -658,9 +822,7 @@ function openHelp() {
       <h2>📖 玩法说明</h2>
       <div style="font-size: 8px; line-height: 2.2;">
         <p><strong>目标</strong>：操控白色棋子 <span style="color:hsl(75,80%,62%);">♙</span> 击败黑色国王 <span style="color:hsl(0,70%,55%);">♚</span>，每局胜利会记录得分。</p>
-
         <p><strong>移动规则</strong>：点击棋盘格子移动。初始可纵横向走 <strong>1格</strong>，斜向需解锁。收集能力可增强移动力。</p>
-
         <p><strong>能力系统</strong>（收集房间内的彩色光球）：</p>
         <ul>
           <li><span style="color:hsl(50,80%,55%);">黄色</span>：纵横向步数 +1（最多 +4）</li>
@@ -669,9 +831,7 @@ function openHelp() {
           <li><span style="color:hsl(25,80%,55%);">橙色</span>：可跳过 1 个阻挡棋子</li>
           <li><span style="color:hsl(280,60%,55%);">紫色</span>：回合结束随机吃掉左右相邻格内 2 回合内到达的敌子</li>
         </ul>
-
         <p><strong>房间与探索</strong>：共 13（简单/普通）或 20（困难）个房间，通过传送门（红色格子）移动。每获得 3 个能力，所有<em>未访问</em>的房间会新增敌人。</p>
-
         <p><strong>敌方棋子走法与吃子</strong>：</p>
         <ul>
           <li><span style="color:hsl(0,70%,55%);">♟ 兵</span>：正交移动 1 格（不能吃子），斜向 1 格吃玩家。</li>
@@ -681,10 +841,8 @@ function openHelp() {
           <li><span style="color:hsl(0,70%,55%);">♛ 后</span>：沿直线或斜线任意步，无阻挡时可吃。</li>
           <li><span style="color:hsl(0,70%,55%);">♚ 王</span>：周围 8 格任意移动，无阻挡时可吃。</li>
         </ul>
-        <p><span style="color:hsl(75,20%,50%);">* 将领（象/马/车/后/王）永久死亡不重生，士兵在普通/困难模式下离开房间回归后会重生。</span></p>
-
+        <p><span style="color:var(--color-text-muted);">* 将领（象/马/车/后/王）永久死亡不重生，士兵在普通/困难模式下离开房间回归后会重生。</span></p>
         <p><strong>分数</strong>：吃掉小兵 +1 分，象/马 +2 分，车 +3 分，后 +5 分。只有击败国王的通关分数才会计入最高纪录。</p>
-
         <p><strong>快捷键</strong>：Tab 地图 | Ctrl 能力 | Esc 菜单</p>
       </div>
       <div style="text-align:center; margin-top:16px;">
@@ -704,20 +862,39 @@ function closeHelp() {
 }
 
 // ============================================================
-// 设置功能（主菜单）
+// 设置功能（含皮肤选择）
 // ============================================================
 
 function openSettings() {
+  const currentSkin = loadSkin();
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.id = 'settings-overlay';
+  
+  let skinOptionsHTML = SKINS.map(skin => {
+    const isSelected = skin.id === currentSkin;
+    return `
+      <div class="skin-option ${isSelected ? 'selected' : ''}" data-skin-id="${skin.id}">
+        <div class="skin-preview" style="background:${skin.preview};"></div>
+        <span class="skin-name">${skin.icon} ${skin.name}</span>
+        ${isSelected ? '<span style="font-size:12px;">✓</span>' : ''}
+      </div>
+    `;
+  }).join('');
+  
   overlay.innerHTML = `
     <div class="modal-box">
       <h2>⚙ 设置</h2>
+      <div style="margin-bottom: 18px;">
+        <p style="font-size: 10px; margin-bottom: 8px;">🎨 皮肤</p>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          ${skinOptionsHTML}
+        </div>
+      </div>
       <div style="margin: 16px 0;">
         <p style="font-size: 10px; margin-bottom: 8px;">棋子字号：<span class="settings-value" id="size-display-main">${pieceFontSize}px</span></p>
         <input type="range" min="16" max="64" value="${pieceFontSize}" class="settings-slider" id="size-slider-main" />
-        <div style="display: flex; justify-content: space-between; font-size: 8px; color: hsl(75,20%,50%);">
+        <div style="display: flex; justify-content: space-between; font-size: 8px; color: var(--color-text-muted);">
           <span>小</span>
           <span>大</span>
         </div>
@@ -728,6 +905,18 @@ function openSettings() {
     </div>
   `;
   document.body.appendChild(overlay);
+
+  // 皮肤选择事件
+  overlay.querySelectorAll('.skin-option').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      const skinId = opt.dataset.skinId;
+      saveSkin(skinId);
+      applySkin(skinId);
+      // 刷新设置界面
+      closeSettings();
+      setTimeout(() => openSettings(), 50);
+    });
+  });
 
   const slider = document.getElementById('size-slider-main');
   const display = document.getElementById('size-display-main');
@@ -745,8 +934,179 @@ function closeSettings() {
   const overlay = document.getElementById('settings-overlay');
   if (overlay) overlay.remove();
   loadPieceFontSize();
-  if (gameState.phase === 'playing' || gameState.phase === 'over') {
+  if (gameState.phase === 'playing' || gameState.phase === 'over' || gameState.phase === 'tutorial_playing') {
     render();
+  }
+}
+
+// ============================================================
+// 积分商店
+// ============================================================
+
+function openShop() {
+  const points = loadPoints();
+  const ownedItems = loadShopItems();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'shop-overlay';
+  let itemsHTML = '';
+  for (const item of SHOP_ITEMS) {
+    const owned = ownedItems[item.id] > 0;
+    const canBuy = points >= item.price && !owned;
+    itemsHTML += `
+      <div class="shop-item-card">
+        <div class="shop-item-icon">${item.icon}</div>
+        <div class="shop-item-info">
+          <div class="shop-item-name">${item.name}</div>
+          <div class="shop-item-desc">${item.desc}</div>
+          <div class="shop-item-price">💰 ${item.price} 分</div>
+          ${owned ? '<div class="shop-item-owned">✅ 已购买</div>' : ''}
+        </div>
+        <div style="flex-shrink:0;">
+          ${owned
+            ? '<button class="btn small" disabled>已购买</button>'
+            : `<button class="btn small primary shop-buy-btn" data-item-id="${item.id}" data-item-price="${item.price}" ${canBuy ? '' : 'disabled'}>${canBuy ? '购买' : '积分不足'}</button>`
+          }
+        </div>
+      </div>
+    `;
+  }
+  overlay.innerHTML = `
+    <div class="modal-box" style="max-width: 420px;">
+      <h2>🏪 积分商店</h2>
+      <div class="points-display">💰 累计积分：<strong>${points}</strong></div>
+      <div style="font-size: 7px; color: var(--color-text-muted); text-align: center; margin-bottom: 10px;">
+        道具仅在下局游戏中生效（简单/普通/困难模式）<br>游戏结束后全部清空
+      </div>
+      ${itemsHTML}
+      <div style="text-align:center; margin-top: 12px;">
+        <button class="btn" onclick="closeShop()">关闭</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeShop();
+  });
+  overlay.querySelectorAll('.shop-buy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const itemId = btn.dataset.itemId;
+      const itemPrice = parseInt(btn.dataset.itemPrice, 10);
+      buyItem(itemId, itemPrice);
+    });
+  });
+}
+
+function closeShop() {
+  const overlay = document.getElementById('shop-overlay');
+  if (overlay) overlay.remove();
+  render();
+}
+
+function buyItem(itemId, price) {
+  let points = loadPoints();
+  if (points < price) {
+    showToast('积分不足！', 'hsl(0,65%,48%)');
+    return;
+  }
+  const items = loadShopItems();
+  if (items[itemId] > 0) {
+    showToast('已购买过该道具！', 'hsl(45,70%,50%)');
+    return;
+  }
+  points -= price;
+  items[itemId] = 1;
+  savePoints(points);
+  saveShopItems(items);
+  showToast('购买成功！道具将在下局生效', 'hsl(140,55%,45%)');
+  closeShop();
+  setTimeout(() => openShop(), 100);
+}
+
+// ============================================================
+// 道具应用（开局时调用）
+// ============================================================
+
+function applyShopItems() {
+  const items = loadShopItems();
+  if (items.lottery === 0 && items.super_lottery === 0 && items.death_immunity === 0 && items.invincible === 0) {
+    gameState.shopItems = { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 };
+    gameState.deathImmunityUsed = false;
+    return;
+  }
+  gameState.shopItems = { ...items };
+  gameState.deathImmunityUsed = false;
+  clearShopItems();
+
+  if (gameState.shopItems.invincible > 0) {
+    gameState.player.abilities.yellow = 4;
+    gameState.player.abilities.blue = 4;
+    gameState.player.abilities.green = true;
+    gameState.player.abilities.orange = true;
+    gameState.player.abilities.purple = true;
+    gameState.abilityCount = 12;
+    showToast('👑 无敌之人：全部技能已解锁！', 'hsl(45,80%,62%)');
+  }
+
+  if (gameState.shopItems.super_lottery > 0) {
+    if (Math.random() < 0.4) {
+      const skill = randomSkillType();
+      applySkillDirectly(skill);
+      showToast('🎫 超级抽奖券触发！获得：' + ABILITY_NAMES[skill], 'hsl(280,60%,55%)');
+    } else {
+      showToast('🎫 超级抽奖券未触发（40%概率）', 'hsl(75,20%,50%)');
+    }
+  }
+
+  if (gameState.shopItems.lottery > 0) {
+    if (Math.random() < 0.2) {
+      const skill = randomSkillType();
+      applySkillDirectly(skill);
+      showToast('🎟 抽奖券触发！获得：' + ABILITY_NAMES[skill], 'hsl(50,80%,55%)');
+    } else {
+      showToast('🎟 抽奖券未触发（20%概率）', 'hsl(75,20%,50%)');
+    }
+  }
+}
+
+function randomSkillType() {
+  const types = ['yellow', 'blue', 'green', 'orange', 'purple'];
+  return pick(types);
+}
+
+function applySkillDirectly(type) {
+  switch (type) {
+    case 'yellow':
+      if (gameState.player.abilities.yellow < 4) {
+        gameState.player.abilities.yellow++;
+        gameState.abilityCount++;
+      }
+      break;
+    case 'blue':
+      if (gameState.player.abilities.blue < 4) {
+        gameState.player.abilities.blue++;
+        gameState.abilityCount++;
+      }
+      break;
+    case 'green':
+      if (!gameState.player.abilities.green) {
+        gameState.player.abilities.green = true;
+        gameState.abilityCount++;
+      }
+      break;
+    case 'orange':
+      if (!gameState.player.abilities.orange) {
+        gameState.player.abilities.orange = true;
+        gameState.abilityCount++;
+      }
+      break;
+    case 'purple':
+      if (!gameState.player.abilities.purple) {
+        gameState.player.abilities.purple = true;
+        gameState.abilityCount++;
+      }
+      break;
   }
 }
 
@@ -758,12 +1118,7 @@ function generateDungeon(difficulty) {
   const size = (difficulty === 'hard') ? 8 : 5;
   const roomCount = (size === 5) ? 13 : 20;
   const boardTypes = (size === 5) ? BOARD_TYPES_5 : BOARD_TYPES_8;
-  let types = [];
-  if (size === 5) {
-    types = [...boardTypes];
-  } else {
-    types = [...boardTypes];
-  }
+  let types = [...boardTypes];
 
   const gridPos = [];
   const occupied = new Set();
@@ -892,7 +1247,6 @@ function isPortalSafe(portalCells, enemies, size) {
 
 function generateBoard(index, type, allConnections, difficulty, size, isSpawn) {
   const myConns = allConnections.filter(c => c.a === index || c.b === index);
-
   const portalCells = [];
   const occupiedForPortal = new Set();
 
@@ -902,7 +1256,6 @@ function generateBoard(index, type, allConnections, difficulty, size, isSpawn) {
     const targetBoard = isA ? conn.b : conn.a;
     const pos = getPortalPos(edge, conn.col, size);
     const dir = edgeToDir(edge);
-
     const key = `${pos.row},${pos.col}`;
     if (!occupiedForPortal.has(key)) {
       occupiedForPortal.add(key);
@@ -910,18 +1263,14 @@ function generateBoard(index, type, allConnections, difficulty, size, isSpawn) {
     }
   }
 
-  const diffConfig = {
-    easy:   [2, 1],
-    normal: [2, 1],
-    hard:   [3, 2],
-  };
+  const diffConfig = { easy: [2, 1], normal: [2, 1], hard: [3, 2] };
   const [pawnCount, advancedCount] = diffConfig[difficulty] || diffConfig.normal;
 
   let enemies;
   let attempts = 0;
   let spawnSafe = false;
-
   const center = Math.floor(size / 2);
+
   do {
     enemies = [];
     const occupied = new Set(portalCells.map(p => `${p.row},${p.col}`));
@@ -969,8 +1318,7 @@ function generateBoard(index, type, allConnections, difficulty, size, isSpawn) {
   }
 
   const initialEnemies = enemies.map(e => ({ ...e }));
-
-  return { index, type, portalCells, enemies, item, initialEnemies, size };
+  return { index, type, portalCells, enemies, item, initialEnemies, size, items: null };
 }
 
 function checkSpawnSafety(enemies, size) {
@@ -1014,6 +1362,134 @@ function randomEmptyCell(occupied, size) {
 }
 
 // ============================================================
+// 教学模式关卡生成
+// ============================================================
+
+const TUTORIAL_LEVELS = [
+  {
+    name: '第1关·士兵',
+    enemyType: 'pawn',
+    enemyRow: 2,
+    enemyCol: 4,
+    promptText: '观察士兵的行动方式，吃掉技能点然后战胜它吧！',
+    completeText: '恭喜过关，现在通过红色传送格前往下一关吧！',
+    items: [
+      { type: 'yellow', row: 1, col: 1 },
+      { type: 'yellow', row: 3, col: 6 },
+      { type: 'yellow', row: 5, col: 2 },
+    ],
+    playerRow: 4,
+    playerCol: 3,
+  },
+  {
+    name: '第2关·象',
+    enemyType: 'bishop',
+    enemyRow: 1,
+    enemyCol: 5,
+    promptText: '观察象的行动方式，吃掉技能点然后战胜它吧！',
+    completeText: '恭喜过关，现在通过红色传送格前往下一关吧！',
+    items: [
+      { type: 'green', row: 3, col: 3 },
+      { type: 'blue', row: 5, col: 1 },
+      { type: 'blue', row: 6, col: 6 },
+    ],
+    playerRow: 4,
+    playerCol: 3,
+  },
+  {
+    name: '第3关·马',
+    enemyType: 'knight',
+    enemyRow: 2,
+    enemyCol: 2,
+    promptText: '观察马的行动方式，吃掉技能点然后战胜它吧！',
+    completeText: '恭喜过关，现在通过红色传送格前往下一关吧！',
+    items: [
+      { type: 'orange', row: 4, col: 6 },
+      { type: 'blue', row: 1, col: 4 },
+    ],
+    playerRow: 4,
+    playerCol: 3,
+  },
+  {
+    name: '第4关·车',
+    enemyType: 'rook',
+    enemyRow: 1,
+    enemyCol: 3,
+    promptText: '观察车的行动方式，吃掉技能点然后战胜它吧！',
+    completeText: '恭喜过关，现在通过红色传送格前往下一关吧！',
+    items: [
+      { type: 'yellow', row: 5, col: 5 },
+      { type: 'blue', row: 3, col: 1 },
+    ],
+    playerRow: 4,
+    playerCol: 3,
+  },
+  {
+    name: '第5关·王后',
+    enemyType: 'queen',
+    enemyRow: 1,
+    enemyCol: 4,
+    promptText: '观察王后的行动方式，吃掉技能点然后战胜它吧！',
+    completeText: '恭喜过关，现在通过红色传送格前往下一关吧！',
+    items: [
+      { type: 'purple', row: 6, col: 3 },
+    ],
+    playerRow: 4,
+    playerCol: 3,
+  },
+  {
+    name: '第6关·国王',
+    enemyType: 'king',
+    enemyRow: 1,
+    enemyCol: 4,
+    promptText: '观察国王的行动方式，吃掉技能点然后战胜它吧！',
+    completeText: '',
+    items: [],
+    playerRow: 4,
+    playerCol: 3,
+  },
+];
+
+function createTutorialBoard(levelIndex, playerAbilities) {
+  const cfg = TUTORIAL_LEVELS[levelIndex];
+  const size = 8;
+  const boardIndex = levelIndex;
+
+  const enemies = [{
+    type: cfg.enemyType,
+    color: 'black',
+    row: cfg.enemyRow,
+    col: cfg.enemyCol,
+    lastMoveTurn: -999,
+    alive: true,
+    respawnable: false,
+  }];
+
+  const items = cfg.items.map(item => ({
+    type: item.type,
+    row: item.row,
+    col: item.col,
+    collected: false,
+  }));
+
+  const portalCells = [];
+
+  return {
+    index: boardIndex,
+    type: 'tutorial_' + (levelIndex + 1),
+    portalCells,
+    enemies,
+    item: null,
+    items: items,
+    initialEnemies: enemies.map(e => ({ ...e })),
+    size,
+    isTutorialBoard: true,
+    tutorialLevel: levelIndex,
+    tutorialEnemyType: cfg.enemyType,
+  };
+}
+
+// ============================================================
 // MOVE GENERATION (动态尺寸)
 // ============================================================
 
@@ -1024,7 +1500,6 @@ function getEnemyAt(board, row, col) {
 function getEnemyMoves(board, enemy, playerRow, playerCol, size) {
   const moves = [];
   const { type, row, col } = enemy;
-
   const allEnemies = board.enemies;
   function isBlocked(r, c) {
     if (r === playerRow && c === playerCol) return false;
@@ -1092,7 +1567,6 @@ function getEnemyMoves(board, enemy, playerRow, playerCol, size) {
       break;
     }
   }
-
   return moves;
 }
 
@@ -1109,10 +1583,6 @@ function getPlayerMoves(state) {
   const canJump = abilities.orange;
 
   const reachable = [];
-  const visited = new Set();
-  const queue = [{ row, col, jumped: false, orthoSteps: 0, diagSteps: 0 }];
-  visited.add(`${row},${col}`);
-
   const orthoDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
   const diagDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
 
@@ -1182,7 +1652,6 @@ function aiMove(state) {
     const moves = getEnemyMoves(board, enemy, pr, pc, size);
     for (const move of moves) {
       let score = 0;
-
       if (move.row === pr && move.col === pc) {
         if (state.justEnteredRoom) continue;
         score = 1000000;
@@ -1224,13 +1693,11 @@ function aiMove(state) {
           score = (oldDist - newDist) * 10 + randInt(0, 5);
         }
       }
-
       allMoves.push({ enemy, move, score });
     }
   }
 
   if (allMoves.length === 0) return null;
-
   allMoves.sort((a, b) => b.score - a.score);
   const topScore = allMoves[0].score;
   const topMoves = allMoves.filter(m => m.score >= topScore - 5);
@@ -1288,8 +1755,68 @@ function initGame(difficulty) {
     abilityCount: 0,
     visitedRooms: new Set(),
     boardSize: size,
+    isTutorial: false,
+    tutorialLevel: 0,
+    tutorialTargetType: null,
+    tutorialPortalAdded: false,
+    showTutorialPrompt: false,
+    showTutorialComplete: false,
+    tutorialPromptText: '',
+    tutorialCompleteText: '',
+    shopItems: { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 },
+    deathImmunityUsed: false,
   };
   gameState.visitedRooms.add(0);
+  applyShopItems();
+  gameState.reachableCells = getPlayerMoves(gameState);
+  loadStats();
+  render();
+}
+
+function initTutorial() {
+  const boards = [];
+  for (let i = 0; i < 6; i++) {
+    boards.push(createTutorialBoard(i, null));
+  }
+  const cfg = TUTORIAL_LEVELS[0];
+  gameState = {
+    phase: 'tutorial_playing',
+    result: null,
+    boards: boards,
+    connections: [],
+    gridPos: [],
+    difficulty: 'normal',
+    currentBoardIndex: 0,
+    player: {
+      boardIndex: 0,
+      row: cfg.playerRow,
+      col: cfg.playerCol,
+      abilities: { yellow: 0, blue: 0, green: false, orange: false, purple: false },
+    },
+    turn: 'player',
+    turnNumber: 1,
+    reachableCells: [],
+    slideDirection: null,
+    captureAnimating: false,
+    justEnteredRoom: false,
+    animatingPiece: null,
+    wins: gameState.wins || 0,
+    highScore: gameState.highScore || 0,
+    score: 0,
+    abilityCount: 0,
+    visitedRooms: new Set(),
+    boardSize: 8,
+    isTutorial: true,
+    tutorialLevel: 0,
+    tutorialTargetType: cfg.enemyType,
+    tutorialPortalAdded: false,
+    showTutorialPrompt: true,
+    showTutorialComplete: false,
+    tutorialPromptText: cfg.promptText,
+    tutorialCompleteText: '',
+    shopItems: { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 },
+    deathImmunityUsed: false,
+  };
   gameState.reachableCells = getPlayerMoves(gameState);
   loadStats();
   render();
@@ -1319,7 +1846,6 @@ function applyAbility(type) {
     case 'orange': gameState.player.abilities.orange = true; break;
     case 'purple': gameState.player.abilities.purple = true; break;
   }
-
   gameState.abilityCount++;
   const colorMap = {
     yellow: 'hsl(50,80%,55%)',
@@ -1330,7 +1856,7 @@ function applyAbility(type) {
   };
   showToast(`${ABILITY_NAMES[type]} 已解锁！ (${gameState.abilityCount}/3)`, colorMap[type]);
 
-  if (gameState.abilityCount % 3 === 0) {
+  if (!gameState.isTutorial && gameState.abilityCount % 3 === 0) {
     enhanceUnvisitedRooms();
   }
 }
@@ -1346,10 +1872,9 @@ function enhanceUnvisitedRooms() {
     showToast('所有房间已访问，无法增强！', 'hsl(75,20%,50%)');
     return;
   }
-
   for (const idx of unvisited) {
     const board = gameState.boards[idx];
-    if (!board) continue;
+    if (!board || board.isTutorialBoard) continue;
     const size = board.size;
     const isAdvanced = Math.random() < 0.5;
     const types = isAdvanced ? ['bishop', 'queen', 'rook', 'knight'] : ['pawn'];
@@ -1358,26 +1883,17 @@ function enhanceUnvisitedRooms() {
     board.enemies.forEach(e => occupied.add(`${e.row},${e.col}`));
     board.portalCells.forEach(p => occupied.add(`${p.row},${p.col}`));
     if (board.item && !board.item.collected) occupied.add(`${board.item.row},${board.item.col}`);
+    if (board.items) {
+      board.items.forEach(it => { if (!it.collected) occupied.add(`${it.row},${it.col}`); });
+    }
     const pos = randomEmptyCell(occupied, size);
     if (pos) {
       const respawnable = type === 'pawn';
       board.enemies.push({
-        type: type,
-        color: 'black',
-        row: pos.row,
-        col: pos.col,
-        lastMoveTurn: -999,
-        alive: true,
-        respawnable: respawnable,
+        type: type, color: 'black', row: pos.row, col: pos.col, lastMoveTurn: -999, alive: true, respawnable: respawnable,
       });
       board.initialEnemies.push({
-        type: type,
-        color: 'black',
-        row: pos.row,
-        col: pos.col,
-        lastMoveTurn: -999,
-        alive: true,
-        respawnable: respawnable,
+        type: type, color: 'black', row: pos.row, col: pos.col, lastMoveTurn: -999, alive: true, respawnable: respawnable,
       });
     }
   }
@@ -1391,7 +1907,7 @@ function switchBoardWithOld(oldBoardIndex, targetIndex) {
 
   gameState.visitedRooms.add(targetIndex);
 
-  if (gameState.difficulty === 'normal' || gameState.difficulty === 'hard') {
+  if (!gameState.isTutorial && (gameState.difficulty === 'normal' || gameState.difficulty === 'hard')) {
     respawnPawns(targetIndex);
   }
 
@@ -1437,32 +1953,25 @@ function switchBoardWithOld(oldBoardIndex, targetIndex) {
 
 function respawnPawns(boardIndex) {
   const board = gameState.boards[boardIndex];
-  if (!board) return;
+  if (!board || board.isTutorialBoard) return;
   const size = board.size;
-
   const aliveEnemies = board.enemies.filter(e => e.alive !== false);
   const initialPawns = board.initialEnemies.filter(e => e.type === 'pawn');
   const alivePawns = aliveEnemies.filter(e => e.type === 'pawn');
-
   const missingCount = initialPawns.length - alivePawns.length;
   if (missingCount <= 0) return;
-
   const occupied = new Set();
   aliveEnemies.forEach(e => occupied.add(`${e.row},${e.col}`));
   board.portalCells.forEach(p => occupied.add(`${p.row},${p.col}`));
   if (board.item && !board.item.collected) occupied.add(`${board.item.row},${board.item.col}`);
-
+  if (board.items) {
+    board.items.forEach(it => { if (!it.collected) occupied.add(`${it.row},${it.col}`); });
+  }
   for (let i = 0; i < missingCount; i++) {
     const pos = randomEmptyCell(occupied, size);
     if (pos) {
       const newPawn = {
-        type: 'pawn',
-        color: 'black',
-        row: pos.row,
-        col: pos.col,
-        lastMoveTurn: -999,
-        alive: true,
-        respawnable: true,
+        type: 'pawn', color: 'black', row: pos.row, col: pos.col, lastMoveTurn: -999, alive: true, respawnable: true,
       };
       board.enemies.push(newPawn);
       occupied.add(`${pos.row},${pos.col}`);
@@ -1471,7 +1980,8 @@ function respawnPawns(boardIndex) {
 }
 
 function movePlayer(toRow, toCol) {
-  if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
+  if ((gameState.phase !== 'playing' && gameState.phase !== 'tutorial_playing') || gameState.turn !== 'player') return;
+  if (gameState.showTutorialPrompt || gameState.showTutorialComplete) return;
 
   const isReachable = gameState.reachableCells.some(c => c.row === toRow && c.col === toCol);
   if (!isReachable) return;
@@ -1492,6 +2002,28 @@ function movePlayer(toRow, toCol) {
       showToast(`+${pts} 分`, 'hsl(75,80%,62%)');
     }
     enemyTarget.alive = false;
+
+    if (gameState.isTutorial && enemyTarget.type === gameState.tutorialTargetType && !gameState.tutorialPortalAdded) {
+      if (gameState.tutorialLevel < 5) {
+        const portalRow = 7;
+        const portalCol = 3;
+        board.portalCells.push({
+          row: portalRow,
+          col: portalCol,
+          targetBoard: gameState.tutorialLevel + 1,
+          direction: 'down',
+        });
+        gameState.tutorialPortalAdded = true;
+        const cfg = TUTORIAL_LEVELS[gameState.tutorialLevel];
+        gameState.tutorialCompleteText = cfg.completeText;
+        gameState.showTutorialComplete = true;
+        gameState._tutorialTargetJustKilled = true;
+        render();
+        return;
+      } else {
+        capturedKing = true;
+      }
+    }
   }
 
   let itemPicked = null;
@@ -1499,6 +2031,14 @@ function movePlayer(toRow, toCol) {
     board.item.collected = true;
     itemPicked = board.item.type;
     applyAbility(itemPicked);
+  }
+  if (board.items) {
+    for (const it of board.items) {
+      if (!it.collected && it.row === toRow && it.col === toCol) {
+        it.collected = true;
+        applyAbility(it.type);
+      }
+    }
   }
 
   gameState.animatingPiece = { fromRow: gameState.player.row, fromCol: gameState.player.col, toRow, toCol, color: 'white' };
@@ -1509,7 +2049,7 @@ function movePlayer(toRow, toCol) {
     triggerPurpleAbility(board);
   }
 
-  if (portal) {
+  if (portal && !gameState.isTutorial) {
     gameState.slideDirection = 'out-' + portal.direction;
     gameState._lastSlideDir = portal.direction;
     gameState.turn = 'enemy';
@@ -1524,6 +2064,29 @@ function movePlayer(toRow, toCol) {
         endPlayerTurn();
       }, 350);
     }, 300);
+    return;
+  }
+
+  if (portal && gameState.isTutorial && gameState.tutorialPortalAdded) {
+    const targetIdx = portal.targetBoard;
+    gameState.tutorialLevel = targetIdx;
+    gameState.tutorialPortalAdded = false;
+    gameState.showTutorialComplete = false;
+    const newBoard = gameState.boards[targetIdx];
+    gameState.currentBoardIndex = targetIdx;
+    gameState.player.boardIndex = targetIdx;
+    gameState.player.row = TUTORIAL_LEVELS[targetIdx].playerRow;
+    gameState.player.col = TUTORIAL_LEVELS[targetIdx].playerCol;
+    gameState.tutorialTargetType = TUTORIAL_LEVELS[targetIdx].enemyType;
+    gameState.turnNumber = 1;
+    gameState.justEnteredRoom = true;
+    gameState.turn = 'player';
+    gameState.reachableCells = getPlayerMoves(gameState);
+    gameState.showTutorialPrompt = true;
+    gameState.tutorialPromptText = TUTORIAL_LEVELS[targetIdx].promptText;
+    gameState.slideDirection = null;
+    gameState.animatingPiece = null;
+    render();
     return;
   }
 
@@ -1562,13 +2125,33 @@ function endPlayerTurn() {
   render();
 
   setTimeout(() => {
-    if (gameState.phase !== 'playing') return;
+    if (gameState.phase !== 'playing' && gameState.phase !== 'tutorial_playing') return;
     const result = aiMove(gameState);
     if (result) {
       const { enemy, move } = result;
       const board = gameState.boards[gameState.currentBoardIndex];
 
       if (move.row === gameState.player.row && move.col === gameState.player.col) {
+        if (!gameState.isTutorial && gameState.shopItems.death_immunity > 0 && !gameState.deathImmunityUsed) {
+          gameState.deathImmunityUsed = true;
+          enemy.alive = false;
+          gameState.animatingPiece = { fromRow: enemy.row, fromCol: enemy.col, toRow: move.row, toCol: move.col, color: 'black' };
+          enemy.row = move.row;
+          enemy.col = move.col;
+          render();
+          showToast('🛡 免死金牌发动！敌人被清除，原地复活！', 'hsl(0,70%,48%)');
+          setTimeout(() => {
+            gameState.justEnteredRoom = false;
+            gameState.turn = 'player';
+            gameState.turnNumber++;
+            gameState.reachableCells = getPlayerMoves(gameState);
+            gameState.animatingPiece = null;
+            gameState.captureAnimating = false;
+            render();
+          }, 600);
+          return;
+        }
+
         gameState.animatingPiece = { fromRow: enemy.row, fromCol: enemy.col, toRow: move.row, toCol: move.col, color: 'black' };
         enemy.row = move.row;
         enemy.col = move.col;
@@ -1598,11 +2181,18 @@ function endPlayerTurn() {
 function winGame() {
   gameState.phase = 'over';
   gameState.result = 'win';
-  gameState.wins++;
-  if (gameState.score > gameState.highScore) {
-    gameState.highScore = gameState.score;
+  if (!gameState.isTutorial) {
+    gameState.wins++;
+    if (gameState.score > gameState.highScore) {
+      gameState.highScore = gameState.score;
+    }
+    const currentPoints = loadPoints();
+    savePoints(currentPoints + gameState.score);
   }
   saveStats();
+  gameState.shopItems = { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 };
+  gameState.deathImmunityUsed = false;
+  clearShopItems();
   render();
 }
 
@@ -1610,11 +2200,18 @@ function loseGame() {
   gameState.phase = 'over';
   gameState.result = 'lose';
   saveStats();
+  gameState.shopItems = { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 };
+  gameState.deathImmunityUsed = false;
+  clearShopItems();
   render();
 }
 
 function restartGame() {
-  initGame(gameState.difficulty);
+  if (gameState.isTutorial) {
+    initTutorial();
+  } else {
+    initGame(gameState.difficulty);
+  }
 }
 
 // ============================================================
@@ -1628,8 +2225,10 @@ function render() {
     app.innerHTML = renderMenu();
   } else if (gameState.phase === 'over') {
     app.innerHTML = renderGameOver();
-  } else {
+  } else if (gameState.phase === 'playing' || gameState.phase === 'tutorial_playing' || gameState.phase === 'paused') {
     app.innerHTML = renderGame();
+  } else {
+    app.innerHTML = renderMenu();
   }
   bindEvents();
   if (gameState.animatingPiece) {
@@ -1639,29 +2238,35 @@ function render() {
 
 function renderMenu() {
   loadStats();
+  const points = loadPoints();
+  const ownedItems = loadShopItems();
+  const hasItems = ownedItems.lottery > 0 || ownedItems.super_lottery > 0 || ownedItems.death_immunity > 0 || ownedItems.invincible > 0;
+  const currentSkin = SKINS.find(s => s.id === loadSkin()) || SKINS[0];
   return `
     <div class="text-center" style="padding-top: 6vh; max-height: 100vh; overflow-y: auto;">
-      <div style="font-size: 14px; color: hsl(75 80% 62%); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
-      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px;">Rogue Chess</h1>
-      <p style="font-size: 9px; color: hsl(75 20% 50%); margin-bottom: 16px; line-height: 2;">
-        探索地牢 · 收集能力 · 击败国王
+      <div style="font-size: 14px; color: var(--color-accent); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
+      <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px; color: var(--color-text);">Rogue Chess</h1>
+      <p style="font-size: 9px; color: var(--color-text-muted); margin-bottom: 16px; line-height: 2;">
+        探索地牢 · 收集能力 · 击败国王 <span style="font-size:7px;"></span>
       </p>
 
-      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:12px;">
         <button class="btn diff-btn diff-easy" onclick="initGame('easy')">简单</button>
         <button class="btn diff-btn diff-normal" onclick="initGame('normal')">标准 (推荐)</button>
         <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难</button>
       </div>
 
       <div style="display:flex; justify-content:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
-        <button class="btn small" onclick="openHelp()">说明</button>
-        <button class="btn small" onclick="openSettings()">设置</button>
+ 	<button class="btn small" onclick="initTutorial()">教学</button>
+  	<button class="btn small" onclick="openShop()">商店</button>
+  	<button class="btn small" onclick="openHelp()">说明</button>
+  	<button class="btn small" onclick="openSettings()">设置</button>
       </div>
 
-      <p style="font-size: 8px; color: hsl(75 20% 50%); margin-top: 6px; line-height: 2;">
-        最高通关分数: <span style="color:hsl(75,80%,62%);">${gameState.highScore}</span> &nbsp;|&nbsp; 胜场: ${gameState.wins}
+      <p style="font-size: 8px; color: var(--color-text-muted); margin-top: 6px; line-height: 2;">
+        最高通关分数: <span style="color:var(--color-accent);">${gameState.highScore}</span> &nbsp;|&nbsp; 胜场: ${gameState.wins}
       </p>
-      <div style="margin-top: 16px; font-size: 7px; color: hsl(75 15% 35%); line-height: 2;">
+      <div style="margin-top: 16px; font-size: 7px; color: var(--color-text-muted); line-height: 2;">
         Tab 地图 | Ctrl 能力 | Esc 菜单<br>
         点击棋盘格子移动
       </div>
@@ -1669,15 +2274,15 @@ function renderMenu() {
   `;
 }
 
-// ============================================================
-// 新版游戏结束弹窗（国王对话气泡）
-// ============================================================
 function renderGameOver() {
   const isWin = gameState.result === 'win';
+  const isTutorial = gameState.isTutorial;
   const quote = getRandomQuote(isWin ? 'win' : 'lose');
   const resultLabel = isWin ? '✦ 胜 利 ✦' : '✗ 失 败 ✗';
   const resultClass = isWin ? 'result-win' : 'result-lose';
-  const scoreInfo = `本局得分: ${gameState.score}  |  胜场: ${gameState.wins}`;
+  const scoreInfo = isTutorial
+    ? `教学模式完成！`
+    : `本局得分: ${gameState.score}  |  胜场: ${gameState.wins}`;
 
   return `
     <div class="modal-overlay">
@@ -1686,14 +2291,14 @@ function renderGameOver() {
           <div class="king-avatar">♚</div>
           <div class="king-text">
             <span class="result-label">${resultLabel}</span>
-            <span style="font-size: 10px; line-height: 1.8;">“${quote}”</span>
-            <div style="margin-top: 8px; font-size: 8px; color: hsl(75 20% 50%); border-top: 1px solid hsl(75 15% 22%); padding-top: 8px;">
+            <span style="font-size: 10px; line-height: 1.8;">"${quote}"</span>
+            <div style="margin-top: 8px; font-size: 8px; color: var(--color-text-muted); border-top: 1px solid var(--color-border); padding-top: 8px;">
               ${scoreInfo}
             </div>
           </div>
         </div>
         <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
-          <button class="btn primary" onclick="restartGame()">再来一局</button>
+          <button class="btn primary" onclick="restartGame()">${isTutorial ? '重新教学' : '再来一局'}</button>
           <button class="btn" onclick="showMenu()">返回菜单</button>
         </div>
       </div>
@@ -1703,6 +2308,10 @@ function renderGameOver() {
 
 function showMenu() {
   gameState.phase = 'menu';
+  gameState.isTutorial = false;
+  gameState.shopItems = { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 };
+  gameState.deathImmunityUsed = false;
+  clearShopItems();
   loadStats();
   render();
 }
@@ -1728,7 +2337,21 @@ function renderGame() {
       const isReachable = gameState.reachableCells.some(rc => rc.row === r && rc.col === c);
       const isPlayer = (r === pr && c === pc);
       const enemy = getEnemyAt(board, r, c);
-      const hasItem = board.item && !board.item.collected && board.item.row === r && board.item.col === c;
+      let hasItem = false;
+      let itemType = null;
+      if (board.item && !board.item.collected && board.item.row === r && board.item.col === c) {
+        hasItem = true;
+        itemType = board.item.type;
+      }
+      if (board.items) {
+        for (const it of board.items) {
+          if (!it.collected && it.row === r && it.col === c) {
+            hasItem = true;
+            itemType = it.type;
+            break;
+          }
+        }
+      }
 
       let cellClass = isLight ? 'light' : 'dark';
       if (isPortal) cellClass += ' portal' + (isLight ? ' light-override' : '');
@@ -1767,12 +2390,12 @@ function renderGame() {
       }
 
       let itemDot = '';
-      if (hasItem) {
+      if (hasItem && itemType) {
         const colorMap = {
           yellow: 'hsl(50, 80%, 55%)', blue: 'hsl(210, 70%, 55%)', green: 'hsl(140, 60%, 48%)',
           orange: 'hsl(25, 80%, 55%)', purple: 'hsl(280, 60%, 55%)'
         };
-        const clr = colorMap[board.item.type] || 'hsl(50, 80%, 55%)';
+        const clr = colorMap[itemType] || 'hsl(50, 80%, 55%)';
         itemDot = `<span class="item-indicator" style="background:${clr}; color:${clr};"></span>`;
       }
 
@@ -1784,67 +2407,64 @@ function renderGame() {
   }
 
   const boardType = board.type;
-  const boardLabel = BOARD_LABELS[boardType] || boardType;
-
-  const abDots = [];
-  if (gameState.player.abilities.yellow > 0) abDots.push(`<span class="ability-dot" style="background:hsl(50,80%,55%);box-shadow:0 0 4px hsl(50,80%,55%);" title="黄色×${gameState.player.abilities.yellow}"></span>`);
-  if (gameState.player.abilities.blue > 0) abDots.push(`<span class="ability-dot" style="background:hsl(210,70%,55%);box-shadow:0 0 4px hsl(210,70%,55%);" title="蓝色×${gameState.player.abilities.blue}"></span>`);
-  if (gameState.player.abilities.green) abDots.push(`<span class="ability-dot" style="background:hsl(140,60%,48%);box-shadow:0 0 4px hsl(140,60%,48%);" title="绿色"></span>`);
-  if (gameState.player.abilities.orange) abDots.push(`<span class="ability-dot" style="background:hsl(25,80%,55%);box-shadow:0 0 4px hsl(25,80%,55%);" title="橙色"></span>`);
-  if (gameState.player.abilities.purple) abDots.push(`<span class="ability-dot" style="background:hsl(280,60%,55%);box-shadow:0 0 4px hsl(280,60%,55%);" title="紫色"></span>`);
+  let boardLabel = BOARD_LABELS[boardType] || boardType;
+  if (gameState.isTutorial) {
+    boardLabel = TUTORIAL_LEVELS[gameState.tutorialLevel]?.name || '教学关卡';
+  }
 
   const turnLabel = gameState.turn === 'player' ? '你的回合' : '敌方回合';
-  const turnColor = gameState.turn === 'player' ? 'hsl(75,80%,62%)' : 'hsl(0,65%,48%)';
+  const turnColor = gameState.turn === 'player' ? 'var(--color-accent)' : 'var(--color-danger)';
 
   const abilityProgress = gameState.abilityCount % 3;
   const nextAbility = 3 - abilityProgress;
-
   const scoreDisplay = `得分: ${gameState.score}`;
-
   const gridStyle = `grid-template-columns: repeat(${size}, 1fr); grid-template-rows: repeat(${size}, 1fr);`;
+
+  const roomInfo = gameState.isTutorial
+    ? `教学关卡 ${gameState.tutorialLevel + 1}/6`
+    : `房间 ${gameState.currentBoardIndex + 1}/${gameState.boards.length}`;
+
+  const hasDeathImmunity = !gameState.isTutorial && gameState.shopItems.death_immunity > 0 && !gameState.deathImmunityUsed;
 
   return `
     <div>
-      <!-- HUD -->
       <div class="hud flex items-center justify-between mb-2 px-1" style="gap: 8px;">
         <div class="min-w-0 flex-1">
-          <div style="color: hsl(75 80% 62%);">${boardLabel}</div>
-          <div style="font-size: 7px; color: hsl(75 20% 50%);">房间 ${gameState.currentBoardIndex + 1}/${gameState.boards.length}</div>
+          <div style="color: var(--color-accent);">${boardLabel}</div>
+          <div style="font-size: 7px; color: var(--color-text-muted);">${roomInfo}</div>
         </div>
         <div class="text-center min-w-0">
           <div style="color: ${turnColor};">${turnLabel}</div>
-          <div style="font-size: 7px; color: hsl(75 20% 50%);">回合 ${gameState.turnNumber}</div>
+          <div style="font-size: 7px; color: var(--color-text-muted);">回合 ${gameState.turnNumber}</div>
         </div>
         <div class="text-right min-w-0">
-          <div style="color: hsl(75 80% 62%); font-size: 9px;">${scoreDisplay}</div>
-          <div style="font-size: 7px; color: hsl(75 20% 50%);">最高 ${gameState.highScore}</div>
+          <div style="color: var(--color-accent); font-size: 9px;">${scoreDisplay}</div>
+          <div style="font-size: 7px; color: var(--color-text-muted);">最高 ${gameState.highScore}</div>
+          ${hasDeathImmunity ? '<div style="font-size:7px;color:hsl(0,70%,48%);">🛡 免死金牌</div>' : ''}
         </div>
       </div>
-      <!-- 能力进度条 -->
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:7px;color:hsl(75,20%,50%);">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:7px;color:var(--color-text-muted);">
         <span>能力进度</span>
-        <div style="flex:1;height:4px;background:hsl(75,12%,20%);border-radius:2px;overflow:hidden;">
-          <div style="width:${(gameState.abilityCount % 3) / 3 * 100}%;height:100%;background:hsl(75,80%,62%);border-radius:2px;transition:width 0.3s;"></div>
+        <div style="flex:1;height:4px;background:var(--color-surface-alt);border-radius:2px;overflow:hidden;">
+          <div style="width:${(gameState.abilityCount % 3) / 3 * 100}%;height:100%;background:var(--color-accent);border-radius:2px;transition:width 0.3s;"></div>
         </div>
         <span>${nextAbility === 3 ? '0' : nextAbility}/3</span>
       </div>
 
-      <!-- Board -->
       <div class="board-wrapper">
         <div class="board-grid board-slide ${slideClass}" id="board-grid" style="${gridStyle}">
           ${cellsHTML}
         </div>
       </div>
 
-      <!-- Controls -->
       <div class="mt-3 flex items-center justify-between" style="gap: 8px;">
-        <button class="btn small" id="btn-map">地图</button>
+        <button class="btn small" id="btn-map" ${gameState.isTutorial ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''}>地图${gameState.isTutorial ? '🚫' : ''}</button>
         <button class="btn small" id="btn-abilities">能力</button>
         <button class="btn small" id="btn-menu">菜单</button>
       </div>
 
-      <div style="font-size: 7px; color: hsl(75 15% 30%); text-align: center; margin-top: 12px; line-height: 2;">
-        点击格子移动 | Tab地图 Ctrl能力 Esc菜单
+      <div style="font-size: 7px; color: var(--color-text-muted); text-align: center; margin-top: 12px; line-height: 2;">
+        点击格子移动 | Tab地图 Ctrl能力 Esc菜单${gameState.isTutorial ? ' | 教学模式地图不可用' : ''}
       </div>
       ${gameState.captureAnimating ? '<div class="capture-overlay"></div>' : ''}
     </div>
@@ -1860,7 +2480,11 @@ let abilitiesVisible = false;
 let pauseVisible = false;
 
 function toggleMap() {
-  if (gameState.phase !== 'playing') return;
+  if (gameState.phase !== 'playing' && gameState.phase !== 'tutorial_playing') return;
+  if (gameState.isTutorial) {
+    showToast('教学模式中地图不可用', 'hsl(75,20%,50%)');
+    return;
+  }
   mapVisible = !mapVisible;
   abilitiesVisible = false;
   pauseVisible = false;
@@ -1868,7 +2492,7 @@ function toggleMap() {
 }
 
 function toggleAbilities() {
-  if (gameState.phase !== 'playing') return;
+  if (gameState.phase !== 'playing' && gameState.phase !== 'tutorial_playing') return;
   abilitiesVisible = !abilitiesVisible;
   mapVisible = false;
   pauseVisible = false;
@@ -1876,9 +2500,9 @@ function toggleAbilities() {
 }
 
 function togglePause() {
-  if (gameState.phase !== 'playing' && gameState.phase !== 'paused') return;
+  if (gameState.phase !== 'playing' && gameState.phase !== 'tutorial_playing' && gameState.phase !== 'paused') return;
   if (gameState.phase === 'paused') {
-    gameState.phase = 'playing';
+    gameState.phase = gameState.isTutorial ? 'tutorial_playing' : 'playing';
     pauseVisible = false;
     document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
     render();
@@ -1894,7 +2518,6 @@ function togglePause() {
 
 function renderOverlays() {
   document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
-
   if (mapVisible) renderMapOverlay();
   if (abilitiesVisible) renderAbilitiesOverlay();
   if (pauseVisible) renderPauseOverlay();
@@ -1904,17 +2527,15 @@ function renderMapOverlay() {
   const overlay = document.createElement('div');
   overlay.className = 'map-overlay dynamic-overlay';
   overlay.innerHTML = `
-    <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:10px;color:hsl(75,80%,62%);z-index:1;">
+    <div style="position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--color-accent);z-index:1;">
       地牢地图 (Tab关闭) · 已探索 ${gameState.visitedRooms.size}/${gameState.boards.length}
     </div>
     <div class="map-container" id="map-container"></div>
   `;
   document.body.appendChild(overlay);
-
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) { toggleMap(); }
   });
-
   setTimeout(() => {
     const container = document.getElementById('map-container');
     if (!container) return;
@@ -1924,12 +2545,10 @@ function renderMapOverlay() {
 
 function drawMap(container) {
   const gridPos = gameState.gridPos;
-  if (!gridPos) return;
-
+  if (!gridPos || gridPos.length === 0) return;
   const rect = container.getBoundingClientRect();
   const w = rect.width;
   const h = rect.height;
-
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (let i = 0; i < gridPos.length; i++) {
     minX = Math.min(minX, gridPos[i].x);
@@ -1971,7 +2590,7 @@ function drawMap(container) {
         const isKing = board.type === 'king';
         const isSpawn = board.type === 'spawn';
 
-        let dotColor = typeColors[board.type];
+        let dotColor = typeColors[board.type] || 'hsl(75,40%,88%)';
         let dotClass = 'map-dot';
         if (board.item && board.item.collected) {
           dotColor = 'hsl(0,0%,40%)';
@@ -2025,8 +2644,8 @@ function renderAbilitiesOverlay() {
 
   overlay.innerHTML = `
     <div class="ability-panel">
-      <div style="font-size:10px;color:hsl(75,80%,62%);margin-bottom:8px;text-align:center;">已解锁能力 (Ctrl关闭)</div>
-      <div style="font-size:8px;color:hsl(75,20%,50%);text-align:center;margin-bottom:10px;">
+      <div style="font-size:10px;color:var(--color-accent);margin-bottom:8px;text-align:center;">已解锁能力 (Ctrl关闭)</div>
+      <div style="font-size:8px;color:var(--color-text-muted);text-align:center;margin-bottom:10px;">
         已获得 ${gameState.abilityCount} 个能力 · 再获得 ${nextAbility === 3 ? '0' : nextAbility} 个触发房间增强
       </div>
       ${items.map(item => `
@@ -2034,8 +2653,8 @@ function renderAbilitiesOverlay() {
           <span style="width:10px;height:10px;border-radius:50%;background:${item.color};flex-shrink:0;"></span>
           <div class="min-w-0 flex-1">
             <div style="color:${item.color};">${item.name}</div>
-            <div style="font-size:7px;color:hsl(75,20%,50%);">${item.desc}</div>
-            <div style="font-size:7px;color:hsl(75,40%,88%);">${item.value}</div>
+            <div style="font-size:7px;color:var(--color-text-muted);">${item.desc}</div>
+            <div style="font-size:7px;color:var(--color-text);">${item.value}</div>
           </div>
         </div>
       `).join('')}
@@ -2044,10 +2663,6 @@ function renderAbilitiesOverlay() {
   document.body.appendChild(overlay);
 }
 
-// ============================================================
-// 暂停菜单（包含字号调节）
-// ============================================================
-
 function renderPauseOverlay() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay dynamic-overlay';
@@ -2055,9 +2670,9 @@ function renderPauseOverlay() {
     <div class="modal-box">
       <h2>暂停</h2>
       <div style="margin: 12px 0;">
-        <p style="font-size: 9px; margin-bottom: 4px;">棋子字号：<span class="settings-value" id="size-display-pause">${pieceFontSize}px</span></p>
+        <p style="font-size: 9px; margin-bottom: 4px; color: var(--color-text);">棋子字号：<span class="settings-value" id="size-display-pause">${pieceFontSize}px</span></p>
         <input type="range" min="16" max="64" value="${pieceFontSize}" class="settings-slider" id="size-slider-pause" />
-        <div style="display: flex; justify-content: space-between; font-size: 7px; color: hsl(75,20%,50%);">
+        <div style="display: flex; justify-content: space-between; font-size: 7px; color: var(--color-text-muted);">
           <span>小</span>
           <span>大</span>
         </div>
@@ -2083,7 +2698,7 @@ function renderPauseOverlay() {
 }
 
 function resumeGame() {
-  gameState.phase = 'playing';
+  gameState.phase = gameState.isTutorial ? 'tutorial_playing' : 'playing';
   pauseVisible = false;
   document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
   render();
@@ -2091,10 +2706,66 @@ function resumeGame() {
 
 function quitToMenu() {
   gameState.phase = 'menu';
+  gameState.isTutorial = false;
   pauseVisible = false;
+  gameState.shopItems = { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 };
+  gameState.deathImmunityUsed = false;
+  clearShopItems();
   document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
   loadStats();
   render();
+}
+
+// ============================================================
+// 教学模式弹窗
+// ============================================================
+
+function showTutorialPromptModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay dynamic-overlay';
+  overlay.id = 'tutorial-prompt-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>📖 ${TUTORIAL_LEVELS[gameState.tutorialLevel].name}</h2>
+      <p style="font-size: 10px; line-height: 1.8; text-align: center; color: var(--color-text);">
+        ${gameState.tutorialPromptText}
+      </p>
+      <div style="text-align:center; margin-top: 16px;">
+        <button class="btn primary" id="btn-tutorial-start">确定</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('btn-tutorial-start').addEventListener('click', () => {
+    overlay.remove();
+    gameState.showTutorialPrompt = false;
+    gameState.reachableCells = getPlayerMoves(gameState);
+    render();
+  });
+}
+
+function showTutorialCompleteModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay dynamic-overlay';
+  overlay.id = 'tutorial-complete-overlay';
+  overlay.innerHTML = `
+    <div class="modal-box">
+      <h2>🎉 恭喜过关！</h2>
+      <p style="font-size: 10px; line-height: 1.8; text-align: center; color: var(--color-text);">
+        ${gameState.tutorialCompleteText}
+      </p>
+      <div style="text-align:center; margin-top: 16px;">
+        <button class="btn primary" id="btn-tutorial-next">确定</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  document.getElementById('btn-tutorial-next').addEventListener('click', () => {
+    overlay.remove();
+    gameState.showTutorialComplete = false;
+    gameState.reachableCells = getPlayerMoves(gameState);
+    render();
+  });
 }
 
 // ============================================================
@@ -2104,7 +2775,8 @@ function quitToMenu() {
 function bindEvents() {
   document.querySelectorAll('.cell').forEach(cell => {
     cell.addEventListener('click', () => {
-      if (gameState.phase !== 'playing' || gameState.turn !== 'player') return;
+      if ((gameState.phase !== 'playing' && gameState.phase !== 'tutorial_playing') || gameState.turn !== 'player') return;
+      if (gameState.showTutorialPrompt || gameState.showTutorialComplete) return;
       const row = parseInt(cell.dataset.row);
       const col = parseInt(cell.dataset.col);
       movePlayer(row, col);
@@ -2117,21 +2789,27 @@ function bindEvents() {
   if (btnMap) btnMap.addEventListener('click', toggleMap);
   if (btnAbilities) btnAbilities.addEventListener('click', toggleAbilities);
   if (btnMenu) btnMenu.addEventListener('click', togglePause);
+
+  if (gameState.showTutorialPrompt && gameState.isTutorial && !document.getElementById('tutorial-prompt-overlay')) {
+    showTutorialPromptModal();
+  }
+  if (gameState.showTutorialComplete && gameState.isTutorial && !document.getElementById('tutorial-complete-overlay')) {
+    showTutorialCompleteModal();
+  }
 }
 
 // ============================================================
-// 键盘监听（仅保留菜单快捷键）
+// 键盘监听
 // ============================================================
 
 document.addEventListener('keydown', (e) => {
   if (gameState.phase === 'menu') {
-    if (e.key === 'Enter') { e.preventDefault(); initGame(); }
     return;
   }
 
   if (e.key === 'Tab') {
     e.preventDefault();
-    if (gameState.phase === 'playing' || gameState.phase === 'paused') {
+    if ((gameState.phase === 'playing' || gameState.phase === 'tutorial_playing' || gameState.phase === 'paused') && !gameState.isTutorial) {
       if (pauseVisible) { pauseVisible = false; document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove()); }
       toggleMap();
     }
@@ -2140,7 +2818,7 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'Control') {
     e.preventDefault();
-    if (gameState.phase === 'playing' || gameState.phase === 'paused') {
+    if (gameState.phase === 'playing' || gameState.phase === 'tutorial_playing' || gameState.phase === 'paused') {
       if (mapVisible) { mapVisible = false; document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove()); }
       toggleAbilities();
     }
@@ -2149,12 +2827,12 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'Escape') {
     e.preventDefault();
-    if (gameState.phase === 'playing' || gameState.phase === 'paused') {
+    if (gameState.phase === 'playing' || gameState.phase === 'tutorial_playing' || gameState.phase === 'paused') {
       if (mapVisible || abilitiesVisible) {
         mapVisible = false;
         abilitiesVisible = false;
         document.querySelectorAll('.dynamic-overlay').forEach(el => el.remove());
-        if (gameState.phase === 'paused') gameState.phase = 'playing';
+        if (gameState.phase === 'paused') gameState.phase = gameState.isTutorial ? 'tutorial_playing' : 'playing';
         render();
         return;
       }
@@ -2169,7 +2847,7 @@ function showToast(msg, color) {
   if (existing) existing.remove();
   const toast = document.createElement('div');
   toast.className = 'toast';
-  toast.style.cssText = `border-color: ${color || 'hsl(75,80%,62%)'};`;
+  toast.style.cssText = `border-color: ${color || 'var(--color-accent)'};`;
   toast.textContent = msg;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 2000);
@@ -2178,6 +2856,10 @@ function showToast(msg, color) {
 // ============================================================
 // INIT
 // ============================================================
+
+// 应用已保存的皮肤
+const savedSkin = loadSkin();
+applySkin(savedSkin);
 
 loadStats();
 loadPieceFontSize();
