@@ -15,7 +15,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-// Tailwind 配置使用 CSS 变量，实现皮肤动态切换
 tailwind.config = {
   theme: {
     extend: {
@@ -50,7 +49,6 @@ tailwind.config = {
 </script>
 <style>
 /* ========== CSS 变量定义（三款皮肤） ========== */
-/* 默认皮肤：深渊绿 (Default) */
 body.skin-default {
   --color-bg: hsl(75 30% 8%);
   --color-surface: hsl(75 15% 14%);
@@ -74,7 +72,6 @@ body.skin-default {
   --color-ability-p: hsl(280 60% 55%);
 }
 
-/* 皮肤二：深蓝冰霜 (Frost) */
 body.skin-frost {
   --color-bg: hsl(210 25% 8%);
   --color-surface: hsl(210 15% 14%);
@@ -98,7 +95,6 @@ body.skin-frost {
   --color-ability-p: hsl(280 60% 55%);
 }
 
-/* 皮肤三：琥珀暖阳 (Amber) */
 body.skin-amber {
   --color-bg: hsl(35 25% 8%);
   --color-surface: hsl(35 15% 14%);
@@ -122,7 +118,6 @@ body.skin-amber {
   --color-ability-p: hsl(280 60% 55%);
 }
 
-/* ========== 全局基础样式（使用变量） ========== */
 *, *::before, *::after { box-sizing: border-box; }
 img, video { max-width: 100%; height: auto; display: block; }
 body { overflow-wrap: break-word; }
@@ -157,7 +152,6 @@ body {
   z-index: 999;
 }
 
-/* 棋盘 */
 .board-grid {
   display: grid;
   aspect-ratio: 1;
@@ -283,7 +277,6 @@ body {
   50%      { opacity: 0.7; }
 }
 
-/* 弹窗 */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -333,7 +326,6 @@ body {
 .btn.small { padding: 6px 12px; font-size: 8px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
-/* 难度按钮 */
 .diff-btn {
   width: 260px;
   max-width: 90vw;
@@ -381,7 +373,6 @@ body {
 }
 .shop-btn:hover { background: hsl(45 25% 18%); border-color: hsl(45 80% 55%); }
 
-/* 地图 */
 .map-overlay {
   position: fixed;
   inset: 0;
@@ -426,7 +417,6 @@ body {
 .map-dot-dim { opacity: 0.35; }
 .map-crown { font-size: 10px; margin-left: 2px; }
 
-/* 能力面板 */
 .ability-panel {
   position: fixed;
   bottom: 20px;
@@ -447,7 +437,6 @@ body {
 .hud { font-size: 9px; }
 .hud .ability-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 
-/* 动画 */
 @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
@@ -458,7 +447,6 @@ body {
 .shake { animation: shake 0.3s ease-in-out; }
 .eat-flash { animation: eatFlash 0.3s; }
 
-/* Toast */
 .toast {
   position: fixed;
   top: 20px;
@@ -487,7 +475,6 @@ body {
   color: var(--color-accent);
 }
 
-/* 皮肤选择器样式 */
 .skin-option {
   display: flex;
   align-items: center;
@@ -510,7 +497,6 @@ body {
 }
 .skin-name { font-size: 10px; color: var(--color-text); flex: 1; }
 
-/* 国王对话气泡 */
 .king-bubble {
   display: flex;
   align-items: flex-start;
@@ -542,7 +528,6 @@ body {
 .result-win .king-text .result-label { color: var(--color-success); }
 .result-lose .king-text .result-label { color: var(--color-danger); }
 
-/* 商店卡片 */
 .shop-item-card {
   border: 2px solid var(--color-border);
   padding: 12px;
@@ -579,7 +564,7 @@ body {
 
 <script>
 // ============================================================
-// ROGUE CHESS - 肉鸽国际象棋 (完整版：皮肤切换 + 积分商店 + 教学模式)
+// ROGUE CHESS - 肉鸽国际象棋 (完整版：皮肤切换 + 积分商店 + 教学模式 + 返回房间)
 // ============================================================
 
 const PIECE_SYMBOLS = {
@@ -628,7 +613,6 @@ const SHOP_ITEMS = [
   { id: 'invincible', name: '无敌之人', price: 1000, icon: '👑', desc: '下局开局直接解锁全部技能', color: 'hsl(45,80%,62%)' },
 ];
 
-// 皮肤定义
 const SKINS = [
   { id: 'default', name: '深渊绿', icon: '🌿', preview: 'hsl(75 30% 8%)' },
   { id: 'frost', name: '冰霜蓝', icon: '❄️', preview: 'hsl(210 25% 8%)' },
@@ -693,6 +677,7 @@ let gameState = {
   tutorialCompleteText: '',
   shopItems: { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 },
   deathImmunityUsed: false,
+  previousBoardIndex: null,
 };
 
 let pieceFontSize = 32;
@@ -718,7 +703,6 @@ function applySkin(skinId) {
   const body = document.body;
   body.classList.remove('skin-default', 'skin-frost', 'skin-amber');
   body.classList.add(`skin-${skinId}`);
-  // 强制重绘以应用变量
   body.style.transition = 'background 0.3s, color 0.3s';
   setTimeout(() => { body.style.transition = ''; }, 300);
 }
@@ -831,7 +815,7 @@ function openHelp() {
           <li><span style="color:hsl(25,80%,55%);">橙色</span>：可跳过 1 个阻挡棋子</li>
           <li><span style="color:hsl(280,60%,55%);">紫色</span>：回合结束随机吃掉左右相邻格内 2 回合内到达的敌子</li>
         </ul>
-        <p><strong>房间与探索</strong>：共 13（简单/普通）或 20（困难）个房间，通过传送门（红色格子）移动。每获得 3 个能力，所有<em>未访问</em>的房间会新增敌人。</p>
+        <p><strong>房间与探索</strong>：共 13（简单/普通）或 20（困难）个房间，通过传送门（红色格子）移动。进入新房间后，可点击脚下的红色传送格返回上一房间。每获得 3 个能力，所有<em>未访问</em>的房间会新增敌人。</p>
         <p><strong>敌方棋子走法与吃子</strong>：</p>
         <ul>
           <li><span style="color:hsl(0,70%,55%);">♟ 兵</span>：正交移动 1 格（不能吃子），斜向 1 格吃玩家。</li>
@@ -906,13 +890,11 @@ function openSettings() {
   `;
   document.body.appendChild(overlay);
 
-  // 皮肤选择事件
   overlay.querySelectorAll('.skin-option').forEach(opt => {
     opt.addEventListener('click', (e) => {
       const skinId = opt.dataset.skinId;
       saveSkin(skinId);
       applySkin(skinId);
-      // 刷新设置界面
       closeSettings();
       setTimeout(() => openSettings(), 50);
     });
@@ -1765,6 +1747,7 @@ function initGame(difficulty) {
     tutorialCompleteText: '',
     shopItems: { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 },
     deathImmunityUsed: false,
+    previousBoardIndex: null,
   };
   gameState.visitedRooms.add(0);
   applyShopItems();
@@ -1816,6 +1799,7 @@ function initTutorial() {
     tutorialCompleteText: '',
     shopItems: { lottery: 0, super_lottery: 0, death_immunity: 0, invincible: 0 },
     deathImmunityUsed: false,
+    previousBoardIndex: null,
   };
   gameState.reachableCells = getPlayerMoves(gameState);
   loadStats();
@@ -1983,6 +1967,56 @@ function movePlayer(toRow, toCol) {
   if ((gameState.phase !== 'playing' && gameState.phase !== 'tutorial_playing') || gameState.turn !== 'player') return;
   if (gameState.showTutorialPrompt || gameState.showTutorialComplete) return;
 
+  // 检查是否点击自身位置，尝试返回上一房间
+  if (toRow === gameState.player.row && toCol === gameState.player.col && !gameState.isTutorial && gameState.previousBoardIndex !== null) {
+    const board = gameState.boards[gameState.currentBoardIndex];
+    const portalBack = board.portalCells.find(p => p.row === toRow && p.col === toCol && p.targetBoard === gameState.previousBoardIndex);
+    if (portalBack) {
+      // 执行返回
+      const targetBoardIndex = gameState.previousBoardIndex;
+      const targetBoard = gameState.boards[targetBoardIndex];
+      const entryPortal = targetBoard.portalCells.find(p => p.targetBoard === gameState.currentBoardIndex);
+      let targetRow, targetCol;
+      if (entryPortal) {
+        targetRow = entryPortal.row;
+        targetCol = entryPortal.col;
+      } else {
+        const center = Math.floor(targetBoard.size / 2);
+        targetRow = center;
+        targetCol = center;
+      }
+      gameState.visitedRooms.add(targetBoardIndex);
+      gameState.previousBoardIndex = null; // 清空，防止再次返回
+      gameState.slideDirection = 'out-' + portalBack.direction;
+      gameState._lastSlideDir = portalBack.direction;
+      gameState.turn = 'enemy';
+      gameState.justEnteredRoom = true;
+      gameState.currentBoardIndex = targetBoardIndex;
+      gameState.player.boardIndex = targetBoardIndex;
+      gameState.player.row = targetRow;
+      gameState.player.col = targetCol;
+      render();
+      setTimeout(() => {
+        const oppMap = { up: 'down', down: 'up', left: 'right', right: 'left' };
+        gameState.slideDirection = 'in-' + (oppMap[portalBack.direction] || 'up');
+        render();
+        requestAnimationFrame(() => {
+          const boardEl = document.getElementById('board-grid');
+          if (boardEl) {
+            boardEl.offsetHeight;
+            boardEl.classList.remove('slide-in-up', 'slide-in-down', 'slide-in-left', 'slide-in-right');
+            boardEl.classList.add('slide-reset');
+          }
+          setTimeout(() => {
+            gameState.slideDirection = null;
+            endPlayerTurn();
+          }, 320);
+        });
+      }, 300);
+      return;
+    }
+  }
+
   const isReachable = gameState.reachableCells.some(c => c.row === toRow && c.col === toCol);
   if (!isReachable) return;
 
@@ -2050,6 +2084,7 @@ function movePlayer(toRow, toCol) {
   }
 
   if (portal && !gameState.isTutorial) {
+    gameState.previousBoardIndex = oldBoardIndex;
     gameState.slideDirection = 'out-' + portal.direction;
     gameState._lastSlideDir = portal.direction;
     gameState.turn = 'enemy';
@@ -2247,7 +2282,7 @@ function renderMenu() {
       <div style="font-size: 14px; color: var(--color-accent); margin-bottom: 6px;">♙ ♟ ♝ ♛ ♜ ♞ ♚</div>
       <h1 style="font-size: 18px; margin-bottom: 2px; line-height: 1.6; letter-spacing: 2px; color: var(--color-text);">Rogue Chess</h1>
       <p style="font-size: 9px; color: var(--color-text-muted); margin-bottom: 16px; line-height: 2;">
-        探索地牢 · 收集能力 · 击败国王 <span style="font-size:7px;"></span>
+        探索地牢 · 收集能力 · 击败国王 <span style="font-size:7px;">
       </p>
 
       <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:12px;">
@@ -2256,11 +2291,12 @@ function renderMenu() {
         <button class="btn diff-btn diff-hard" onclick="initGame('hard')">困难</button>
       </div>
 
+
       <div style="display:flex; justify-content:center; gap:12px; margin-bottom:8px; flex-wrap:wrap;">
- 	<button class="btn small" onclick="initTutorial()">教学</button>
-  	<button class="btn small" onclick="openShop()">商店</button>
-  	<button class="btn small" onclick="openHelp()">说明</button>
-  	<button class="btn small" onclick="openSettings()">设置</button>
+        <button class="btn small" onclick="initTutorial()">教学</button>
+        <button class="btn small" onclick="openShop()">商店</button>
+        <button class="btn small" onclick="openHelp()">说明</button>
+        <button class="btn small" onclick="openSettings()">设置</button>
       </div>
 
       <p style="font-size: 8px; color: var(--color-text-muted); margin-top: 6px; line-height: 2;">
@@ -2425,6 +2461,7 @@ function renderGame() {
     : `房间 ${gameState.currentBoardIndex + 1}/${gameState.boards.length}`;
 
   const hasDeathImmunity = !gameState.isTutorial && gameState.shopItems.death_immunity > 0 && !gameState.deathImmunityUsed;
+  const canReturn = !gameState.isTutorial && gameState.previousBoardIndex !== null && gameState.boards[gameState.currentBoardIndex]?.portalCells.some(p => p.row === pr && p.col === pc && p.targetBoard === gameState.previousBoardIndex);
 
   return `
     <div>
@@ -2450,6 +2487,7 @@ function renderGame() {
         </div>
         <span>${nextAbility === 3 ? '0' : nextAbility}/3</span>
       </div>
+      ${canReturn ? '<div style="font-size:7px;color:var(--color-accent);text-align:center;margin-bottom:4px;">🔙 点击脚下可返回上一房间</div>' : ''}
 
       <div class="board-wrapper">
         <div class="board-grid board-slide ${slideClass}" id="board-grid" style="${gridStyle}">
@@ -2857,7 +2895,6 @@ function showToast(msg, color) {
 // INIT
 // ============================================================
 
-// 应用已保存的皮肤
 const savedSkin = loadSkin();
 applySkin(savedSkin);
 
